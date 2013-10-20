@@ -6,9 +6,11 @@
  */
 
 #include "sc_combine.h"
+#include "sc_config.h"
 
 int addExtStyle(Buffer *destBuf, ParamConfig *paramConfig) {
-	if(!destBuf ||!paramConfig || !paramConfig->styleField) {
+
+	if(NULL == destBuf ||NULL == paramConfig || NULL == paramConfig->styleField) {
 		return 0;
 	}
 	StyleField *styleField = paramConfig->styleField;

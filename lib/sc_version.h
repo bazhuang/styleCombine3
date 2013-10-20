@@ -9,6 +9,7 @@
 #define SC_VERSION_H_
 
 #include "sc_common.h"
+#include "sc_config.h"
 
 void checkVersionUpdate(sc_pool_t *server_pool, sc_pool_t *req_pool, GlobalVariable *globalVariable);
 

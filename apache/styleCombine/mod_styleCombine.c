@@ -26,12 +26,14 @@
 #include "sc_common.h"
 #include "sc_config.h"
 #include "sc_log.h"
+#include "sc_mod_filter.h"
+#include "sc_version.h"
+#include "sc_html_parser.h"
 
 
 module AP_MODULE_DECLARE_DATA                styleCombine_module;
 
-#define STYLE_COMBINE_NAME                   "styleCombine"
-#define MODULE_BRAND                         STYLE_COMBINE_NAME"/3.0.0"
+#define IS_LOG_ENABLED(logLevelMask) (logLevelMask == globalVariable.pConfig->printLog)
 
 static server_rec       *server;
 
@@ -83,16 +85,17 @@ static void apr_bucket_nothing_free(void *mem) {
  * 另外如果将“apr_bucket_nothing_free” 设置为NULL也是可行的，但增加了一次memcpy。因为apache会创建一块新内存来存放这个数据，可这些操作都是不需要的。
  * 所以使用一个空方法来绕开这个问题。
  */
-static apr_bucket * addBucket(conn_rec *c, apr_bucket_brigade *pbbkOut, char *str, int strLen) {
+static int addBucket(conn_rec *c, apr_bucket_brigade *pbbkOut, char *str, int strLen) {
 	if(NULL == str || strLen <= 0) {
-		return NULL;
+		return 0;
 	}
 	apr_bucket *pbktOut = NULL;
 	pbktOut = apr_bucket_heap_create(str, strLen, apr_bucket_nothing_free, c->bucket_alloc);
 	if(NULL != pbktOut) {
 		APR_BRIGADE_INSERT_TAIL(pbbkOut, pbktOut);
+		return strLen;
 	}
-	return pbktOut;
+	return 0;
 }
 
 static int put_data_to_bucket(request_rec *req, LinkedList *blockList, Buffer *combinedStyleBuf[3], CombineCtx *ctx) {
@@ -226,7 +229,7 @@ static apr_status_t styleCombineOutputFilter(ap_filter_t *f, apr_bucket_brigade 
 	 * 添加模块的动态开关，由版本文件内容来控制
 	 */
 	if(NULL != globalVariable.modRunMode && 0 == memcmp(globalVariable.modRunMode, RUN_MODE_STATUS_WITH_LEN)) {
-		checkVersionUpdate(r->server->process->pool, r->pool);
+		checkVersionUpdate(r->server->process->pool, r->pool, &globalVariable);
 		return ap_pass_brigade(f->next, pbbIn);
 	}
 	/**
@@ -273,7 +276,7 @@ static apr_status_t styleCombineOutputFilter(ap_filter_t *f, apr_bucket_brigade 
 		apr_table_unset(r->headers_out, "Content-MD5");
 		//set debugMode value
 		ctx->debugMode = (short) debugMode;
-        checkVersionUpdate(r->server->process->pool, r->pool);
+        checkVersionUpdate(r->server->process->pool, r->pool, &globalVariable);
 	}
 
 	//FIXME:保留trunked传输方式,（未实现）
@@ -289,7 +292,8 @@ static apr_status_t styleCombineOutputFilter(ap_filter_t *f, apr_bucket_brigade 
 			paramConfig->pool      = r->pool;
 			paramConfig->debugMode = debugMode;
 			paramConfig->pConfig   = pConfig;
-			paramConfig->styleParserTags = styleParserTags;
+			//paramConfig->styleParserTags = styleParserTags;
+			//FIXME: fix this
 
 			int styleCount = html_parser(paramConfig, ctx->buf, combinedStyleBuf, blockList, r->unparsed_uri);
 			if(0 == styleCount) {

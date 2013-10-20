@@ -9,7 +9,8 @@
 #define SC_CONFIG_H_
 
 #include "sc_common.h"
-#include "sc_config.h"
+#include "sc_linked_list.h"
+#include "sc_string.h"
 
 #define STYLE_COMBINE_NAME                        "styleCombine"
 #define MODULE_BRAND                               STYLE_COMBINE_NAME"/2.1.0"
@@ -37,18 +38,79 @@
 enum StyleType                   { SC_TYPE_CSS, SC_TYPE_JS };
 /*position char */
 enum PositionEnum                { SC_TOP, SC_HEAD, SC_FOOTER, SC_NONE };
+
 /*tag field*/
 enum TagNameEnum                 { SC_BHEAD, SC_EHEAD, SC_EBODY, SC_LINK, SC_SCRIPT, SC_TEXTAREA, SC_COMMENT_EXPRESSION, SC_TN_NONE };
-char *tagPatterns[7]    =        { "head", "/head", "/body", "link", "script", "textarea", "!--" };
-short tagPatternsLen[7] =        { 4, 5, 5, 4, 6, 8, 3 };
 
-typedef struct StyleParserTag StyleParserTag;
-typedef struct CombineConfig  CombineConfig;
-typedef struct StyleField     StyleField;
-typedef struct StyleList      StyleList;
-typedef struct ContentBlock   ContentBlock;
-typedef struct ParamConfig    ParamConfig;
-typedef struct GlobalVariable GlobalVariable;
+typedef struct {
+	Buffer            *prefix;
+	Buffer            *mark;
+	Buffer            *refTag;
+	Buffer            *closeTag;
+	int                suffix;
+	enum StyleType     styleType;
+} StyleParserTag;
+
+typedef struct {
+	short              enabled;
+	int                maxUrlLen;
+	int                printLog;
+	char              *filterCntType;
+	Buffer            *appName;
+	Buffer            *oldDomains[DOMAINS_COUNT];
+	Buffer            *newDomains[DOMAINS_COUNT];
+	Buffer            *asyncVariableNames[DOMAINS_COUNT];
+	LinkedList        *blackList;
+	LinkedList        *whiteList;
+} CombineConfig;
+
+typedef struct StyleField {
+	short                 async;
+	enum StyleType        styleType;
+	short                 domainIndex;
+	Buffer               *styleUri;
+	Buffer               *group;
+	Buffer               *media;
+	Buffer               *version;
+	enum PositionEnum     position;
+} StyleField;
+
+typedef struct {
+	short                domainIndex;
+	Buffer              *group;
+	LinkedList          *list[2];
+} StyleList;
+
+typedef struct {
+	int                  bIndex;
+	int                  eIndex;
+	//用于存放，那些没有合并的style；有内容时 bIndex和eIndex都视无效
+	Buffer              *cntBlock;
+	//当前对象的类型如是：<head>,</head>, </body>等
+	enum TagNameEnum     tagNameEnum;
+} ContentBlock;
+
+typedef struct  {
+	sc_thread_mutex_t   *getDataLock, *intervalCheckLock;
+	time_t               prevTime;
+	time_t               upateTime;
+	sc_pool_t           *newPool, *oldPool;
+	sc_hash_t          *styleVersionTable;
+	CombineConfig       *pConfig;
+	char                *modRunMode;
+} GlobalVariable;
+
+typedef struct {
+	StyleField          *styleField;
+	Buffer              *domain;
+	short                isNewLine;
+	short                needExt;
+	short                debugMode;
+	int                  styleCount;
+	CombineConfig       *pConfig;
+	StyleParserTag      *styleParserTags[2];
+	sc_pool_t           *pool;
+} ParamConfig;
 
 void global_variable_init(sc_pool_t *pool, CombineConfig *pConfig, GlobalVariable *globalVariable);
 

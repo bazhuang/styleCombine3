@@ -5,80 +5,7 @@
  *      Author: zhiwenmizw
  */
 
-#include "sc_common.h"
 #include "sc_config.h"
-#include "sc_linked_list.h"
-#include "sc_string.h"
-
-struct StyleParserTag {
-	Buffer            *prefix;
-	Buffer            *mark;
-	Buffer            *refTag;
-	Buffer            *closeTag;
-	int                suffix;
-	enum StyleType     styleType;
-};
-
-struct CombineConfig {
-	short              enabled;
-	int                maxUrlLen;
-	int                printLog;
-	char              *filterCntType;
-	Buffer            *appName;
-	Buffer            *oldDomains[DOMAINS_COUNT];
-	Buffer            *newDomains[DOMAINS_COUNT];
-	Buffer            *asyncVariableNames[DOMAINS_COUNT];
-	LinkedList        *blackList;
-	LinkedList        *whiteList;
-};
-
-struct StyleField {
-	short                 async;
-	enum StyleType        styleType;
-	short                 domainIndex;
-	Buffer               *styleUri;
-	Buffer               *group;
-	Buffer               *media;
-	Buffer               *version;
-	enum PositionEnum     position;
-};
-
-struct ParamConfig {
-	StyleField          *styleField;
-	Buffer              *domain;
-	short                isNewLine;
-	short                needExt;
-	short                debugMode;
-	int                  styleCount;
-	CombineConfig       *pConfig;
-	StyleParserTag      *styleParserTags;
-	sc_pool_t           *pool;
-};
-
-struct StyleList {
-	short                domainIndex;
-	Buffer              *group;
-	LinkedList          *list[2];
-};
-
-struct ContentBlock {
-	int                  bIndex;
-	int                  eIndex;
-	//用于存放，那些没有合并的style；有内容时 bIndex和eIndex都视无效
-	Buffer              *cntBlock;
-	//当前对象的类型如是：<head>,</head>, </body>等
-	enum TagNameEnum     tagNameEnum;
-};
-
-struct GlobalVariable {
-	sc_thread_mutex_t   *getDataLock, *intervalCheckLock;
-	time_t               prevTime;
-	time_t               upateTime;
-	sc_pool_t           *newPool, *oldPool;
-	sc_hash_t          *styleVersionTable;
-	CombineConfig       *pConfig;
-	char                *modRunMode;
-};
 
 void global_variable_init(sc_pool_t *pool, CombineConfig *pConfig,  GlobalVariable *globalVariable) {
 	globalVariable->styleVersionTable = NULL;
@@ -117,8 +44,11 @@ void combine_config_init(sc_pool_t *pool, CombineConfig *pConfig) {
 
 void *style_tag_init(sc_pool_t *pool, StyleParserTag *styleParserTags[2]) {
 
-	StyleParserTag *cssPtag = styleParserTags[SC_TYPE_CSS] = sc_palloc(pool, sizeof(StyleParserTag));
-	StyleParserTag *jsPtag = styleParserTags[SC_TYPE_JS]   = sc_palloc(pool, sizeof(StyleParserTag));
+	StyleParserTag *cssPtag = sc_palloc(pool, sizeof(StyleParserTag));
+	StyleParserTag *jsPtag  = sc_palloc(pool, sizeof(StyleParserTag));
+	styleParserTags[SC_TYPE_CSS] = cssPtag;
+	styleParserTags[SC_TYPE_JS]  = jsPtag;
+
 	if(NULL == cssPtag || NULL == jsPtag) {
 		return NULL;
 	}

@@ -6,6 +6,8 @@
  */
 
 #include <errno.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 
 #include "sc_log.h"
 #include "sc_socket.h"

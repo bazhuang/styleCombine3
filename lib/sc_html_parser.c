@@ -5,7 +5,10 @@
  *      Author: zhiwenmizw
  */
 
+#include "sc_log.h"
 #include "sc_html_parser.h"
+#include "sc_version.h"
+#include "sc_combine.h"
 
 #define INIT_TAG_CONFIG(tagConfig, stylefield, newDomain, haveNewLine) {\
 	tagConfig->styleField   = stylefield; \
@@ -179,7 +182,6 @@ static int parserTag(ParamConfig *paramConfig, StyleParserTag *ptag, Buffer *max
 	}
 
 	char *currURI    = currURL + domain->used;
-	int groupLen     = 0;
 	short hasDo      = 0,  stop = 0;
 	Buffer *styleUri = buffer_init_size(pool, (maxUrlBuf->used - domain->used));
 	if(NULL == styleUri) {
@@ -541,7 +543,7 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt, Buffer *combinedSty
 
 			//parser Tag
 			StyleField *styleField = NULL;
-			int retLen = parserTag(req_pool, paramConfig->styleParserTags[styleType], maxUrlBuf, &styleField, istr);
+			int retLen = parserTag(paramConfig, paramConfig->styleParserTags[styleType], maxUrlBuf, &styleField, istr);
 			if(NULL == styleField) { //an error style
 				NEXT_CHARS(istr, eIndex, retLen);
 				continue;
@@ -552,7 +554,7 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt, Buffer *combinedSty
 			add(req_pool, blockList, (void *) block);
 			bIndex        = eIndex;
 
-			if(IS_LOG_ENABLED(LOG_STYLE_FIELD)) {
+			if(LOG_STYLE_FIELD == paramConfig->pConfig->printLog) {
 				sc_log_debug(LOG_STYLE_FIELD, "styleField uri[%s]used[%d]len[%d]size[%d] type[%d] group[%s] media[%s] pos[%d] async[%d]",
 								styleField->styleUri->ptr, styleField->styleUri->used, strlen(styleField->styleUri->ptr), styleField->styleUri->size,
 								styleField->styleType, styleField->group->ptr,
@@ -565,7 +567,7 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt, Buffer *combinedSty
 
 			//IE条件表达式里面的style不能做去重操作
 			if(isExpression) {
-				styleField->version = getStrVersion(req_pool, unparsed_uri, styleField->styleUri);
+				styleField->version = getStrVersion(req_pool, unparsed_uri, styleField->styleUri, NULL);
 				block               = contentBlock_create_init(req_pool, -1, 0, tnameEnum);
 				block->cntBlock     = buffer_init_size(req_pool, paramConfig->domain->used + styleField->styleUri->used + 100);
 				add(req_pool, blockList, (void *) block);
@@ -578,7 +580,7 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt, Buffer *combinedSty
 				continue;
 			}
 
-			styleField->version = getStrVersion(req_pool, unparsed_uri, styleField->styleUri);
+			styleField->version = getStrVersion(req_pool, unparsed_uri, styleField->styleUri, NULL);
 
 			//当没有使用异步并且又没有设置位置则保持原位不动
 			if(0 == styleField->async && SC_NONE == styleField->position) {
@@ -777,7 +779,7 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt, Buffer *combinedSty
 				string_append(req_pool, headBuf, "={", 2);
 				while(NULL != node) {
 					styleList = (StyleList *) node->value;
-					combineStylesAsync(req_pool, styleList, headBuf, tmpUriBuf, versionBuf);
+					combineStylesAsync(paramConfig, styleList, headBuf, tmpUriBuf, versionBuf);
 					node = (ListNode *) node->next;
 				}
 				headBuf->used -= 1;

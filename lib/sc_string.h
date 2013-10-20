@@ -76,4 +76,15 @@ int parseargline(char *str, char **pattern) {
 	return 0;
 }
 
+char *sc_pstrmemdup(sc_pool_t *pool, const char *s, size_t n) {
+    char *res;
+    if (s == NULL) {
+        return NULL;
+    }
+    res = sc_palloc(pool, n + 1);
+    memcpy(res, s, n);
+    res[n] = '\0';
+    return res;
+}
+
 #endif /* SC_STRING_H_ */
