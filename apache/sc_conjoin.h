@@ -19,12 +19,8 @@ typedef apr_hash_t   sc_hash_t;
 
 typedef apr_thread_mutex_t sc_thread_mutex_t;
 
-void *sc_palloc(sc_pool_t *pool, long size) {
-	return apr_palloc(pool, size);
-}
+void *sc_palloc(sc_pool_t *pool, long size);
 
-void *sc_pcalloc(sc_pool_t *pool, long size) {
-	return apr_pcalloc(pool, size);
-}
+void *sc_pcalloc(sc_pool_t *pool, long size);
 
 #endif /* SC_CONJOIN_H_ */

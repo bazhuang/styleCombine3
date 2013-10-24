@@ -1,0 +1,73 @@
+ifeq ($(APXS),)
+APXS=/Users/zhiwenmizw/pub/installed/httpd-2.2.15/bin/apxs
+endif
+
+# Note that gcc flags are passed through apxs, so preface with -Wc
+
+
+HEADS_LIB=../lib
+INCLUDES=-I/Users/zhiwenmizw/pub/installed/httpd-2.2.15/include -I/usr/include/apr-1 -I/usr/include/apr-1 -I${HEADS_LIB} -I.
+
+CFLAGS =-g -O0 -Wall
+
+CC=gcc
+
+SHARED=-shared -fpic
+
+OBJECTS=sc_buffer.o sc_config.o sc_linked_list.o sc_socket.o sc_mod_filter.o sc_version.o sc_html_parser.o sc_combine.o
+
+#获取目录中的所有.c后缀的文件
+#SOURCE  := $(wildcard ../lib/*.c)
+#OBJECTS  := $(patsubst %.c,%.o,$(SOURCE))
+
+MY_CFLAGS=-Wc,-Wc,-Wall,-O2
+
+INCLUDES=-I../lib
+
+SOURCE_FILES=mod_styleCombine.c ../lib/sc_buffer.c ../lib/sc_config.c ../lib/sc_linked_list.c ../lib/sc_socket.c ../lib/sc_mod_filter.c ../lib/sc_version.c ../lib/sc_html_parser.c ../lib/sc_combine.c
+HEAD_FILES=sc_conjoin.c ../lib/sc_common.h ../lib/sc_buffer.h ../lib/sc_config.h ../lib/sc_linked_list.h ../lib/sc_socket.h ../lib/sc_mod_filter.h ../lib/sc_version.h ../lib/sc_html_parser.h ../lib/sc_combine.h ../lib/sc_string.h ../lib/sc_log.h 
+
+mod_styleCombine.so: $(SOURCE_FILES) $(HEAD_FILES)
+	$(APXS) -c $(INCLUDES) -o mod_styleCombine.so $(MY_CFLAGS) $(SOURCE_FILES)
+
+#apxs -c -I../lib/ -i mod_styleCombine.c
+
+gcc -c sc_buffer.c sc_combine.c sc_config.c sc_html_parser.c sc_linked_list.c sc_mod_filter.c sc_socket.c sc_version.c
+
+mod_styleCombine.so: mod_styleCombine.o ${OBJECTS}
+	apxs -c $< -i mod_styleCombine.c
+
+mod_styleCombine.o: mod_styleCombine.c 
+	$(CC) -c $< ${INCLUDES} ${CFLAGS}
+
+#cc -g -prefer-pic   -DDARWIN -DSIGPROCMASK_SETS_THREAD_MASK  -I/Users/zhiwenmizw/pub/installed/httpd-2.2.15/include -I/usr/include/apr-1 -I/usr/include/apr-1 -Wc,-Wall,-O2 -Ilib -c -o lib/SC_Buffer.lo lib/SC_Buffer.c && touch lib/SC_Buffer.slo
+
+sc_buffer.o: ${HEADS_LIB}/sc_buffer.c
+	$(CC) -c $< ${INCLUDES} ${CFLAGS}
+
+sc_config.o: ${HEADS_LIB}/sc_config.c
+	$(CC) -c $< ${INCLUDES} ${CFLAGS}
+	
+sc_linked_list.o: ${HEADS_LIB}/sc_linked_list.c
+	$(CC) -c $< ${INCLUDES} ${CFLAGS}
+	
+sc_socket.o: ${HEADS_LIB}/sc_socket.c
+	$(CC) -c $< ${INCLUDES} ${CFLAGS}
+	
+sc_mod_filter.o: ${HEADS_LIB}/sc_mod_filter.c
+	$(CC) -c $< ${INCLUDES} ${CFLAGS}
+	
+sc_version.o: ${HEADS_LIB}/sc_version.c
+	$(CC) -c $< ${INCLUDES} ${CFLAGS}
+	
+sc_html_parser.o: ${HEADS_LIB}/sc_html_parser.c
+	$(CC) -c $< ${INCLUDES} ${CFLAGS}
+	
+sc_combine.o: ${HEADS_LIB}/sc_combine.c
+	$(CC) -c $< ${INCLUDES} ${CFLAGS}
+
+install: mod_styleCombine.la
+	$(APXS) -i $<
+
+clean:
+	rm -f `find . -name \*.o -o -name \*.so -o -name \*~ -o -name \*.slo -o -name \*.lo -o -name \*.la -o -name \*.loT`

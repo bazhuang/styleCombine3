@@ -51,6 +51,9 @@
 	} \
 }
 
+static char *tagPatterns[7]    =        { "head", "/head", "/body", "link", "script", "textarea", "!--" };
+static short tagPatternsLen[7] =        { 4, 5, 5, 4, 6, 8, 3 };
+
 static StyleField *style_field_create(sc_pool_t  *pool) {
 	StyleField *styleField  = (StyleField *) sc_palloc(pool, sizeof(StyleField));
 	if(NULL == styleField) {
