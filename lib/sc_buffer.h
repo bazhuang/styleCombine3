@@ -11,9 +11,9 @@
 #include "sc_common.h"
 
 typedef struct {
-	char       *ptr;
-	long        used;
-	long        size;
+	char         *ptr;
+	size_t        used;
+	size_t        size;
 } Buffer;
 
 #define SC_BUFFER_PIECE_SIZE                     128
@@ -26,7 +26,15 @@ typedef struct {
 
 #define SC_IS_EMPTY_BUFFER(buf) (NULL == buf || 0 == buf->used)
 
-#define SC_FREE(buf) if(NULL != buf) free(buf);
+#define SC_BUFF_FREE(buf) { \
+	if(NULL != buf) { \
+		if(NULL != buf->ptr) { \
+			free(buf->ptr); \
+			buf->ptr = NULL; \
+		} \
+		free(buf); \
+	} \
+}
 
 #define SC_PATH_SLASH(pathBuf) { \
 	if(NULL != pathBuf && '/' != pathBuf->ptr[pathBuf->used - 1]) { \
@@ -44,8 +52,10 @@ int prepare_buffer_size(sc_pool_t *pool, Buffer *buf, size_t in_size);
 
 Buffer *buffer_init_size(sc_pool_t *pool, size_t in_size);
 
-void string_append(sc_pool_t *pool, Buffer *buf, char *str, int strLen);
+void string_append(sc_pool_t *pool, Buffer *buf, char *str, size_t strLen);
 
-int putValueToBuffer(Buffer *buf, char *str);
+void string_append_content(Buffer *buf, char *str, size_t strLen);
+
+short putValueToBuffer(Buffer *buf, char *str);
 
 #endif /* SC_BUFFER_H_ */

@@ -13,7 +13,7 @@
 #include "sc_string.h"
 
 #define STYLE_COMBINE_NAME                        "styleCombine"
-#define MODULE_BRAND                               STYLE_COMBINE_NAME"/2.1.0"
+#define MODULE_BRAND                               STYLE_COMBINE_NAME"/3.0.0"
 
 #define EXT_JS_WITH_LEN                           ".js", 3
 #define EXT_CSS_WITH_LEN                          ".css", 4
@@ -95,7 +95,7 @@ typedef struct  {
 	time_t               prevTime;
 	time_t               upateTime;
 	sc_pool_t           *newPool, *oldPool;
-	sc_hash_t          *styleVersionTable;
+	sc_hash_t           *styleVersionTable;
 	CombineConfig       *pConfig;
 	char                *modRunMode;
 } GlobalVariable;
@@ -108,7 +108,8 @@ typedef struct {
 	short                debugMode;
 	int                  styleCount;
 	CombineConfig       *pConfig;
-	StyleParserTag      *styleParserTags[2];
+	StyleParserTag     **styleParserTags;
+	GlobalVariable      *globalVariable;
 	sc_pool_t           *pool;
 } ParamConfig;
 

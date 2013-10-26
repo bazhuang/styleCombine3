@@ -5,6 +5,8 @@
  *      Author: zhiwenmizw
  */
 
+#include <stdlib.h>
+
 #include "sc_buffer.h"
 #include "sc_log.h"
 
@@ -41,7 +43,7 @@ Buffer *buffer_init_size(sc_pool_t *pool, size_t in_size) {
 	return buf;
 }
 
-void string_append(sc_pool_t *pool, Buffer *buf, char *str, int strLen) {
+void string_append(sc_pool_t *pool, Buffer *buf, char *str, size_t strLen) {
 	if(NULL == buf || NULL == str || strLen <= 0) {
 		return;
 	}
@@ -61,7 +63,30 @@ void string_append(sc_pool_t *pool, Buffer *buf, char *str, int strLen) {
 	buf->ptr[buf->used] = ZERO_END;
 }
 
-int putValueToBuffer(Buffer *buf, char *str) {
+void string_append_content(Buffer *buf, char *str, size_t strLen) {
+	if(NULL == buf || NULL == str || strLen <= 0) {
+		return;
+	}
+	if(0 == buf->size) {
+		return;
+	}
+	if(buf->used + strLen >= buf->size) {
+
+		size_t newSize = SC_ALIGN_DEFAULT(buf->size + (strLen + 1024));
+		buf->ptr  = (char *) realloc(buf->ptr, newSize);
+
+		if(NULL == buf->ptr) {
+			sc_log_error("realloc error[%d] [%s]===[%ld]", getpid(), str, buf->size);
+			return;
+		}
+		buf->size = newSize;
+	}
+	memcpy(buf->ptr + buf->used, str, strLen);
+	buf->used += strLen;
+	buf->ptr[buf->used] = ZERO_END;
+}
+
+short putValueToBuffer(Buffer *buf, char *str) {
 	if (NULL == buf || NULL == str) {
 		return 0;
 	}

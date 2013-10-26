@@ -5,10 +5,13 @@
  * compile
  * apxs -ic mod_styleCombine.c
  */
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-#include <unistd.h>
+
+#include "sc_common.h"
+#include "sc_config.h"
+#include "sc_log.h"
+#include "sc_mod_filter.h"
+#include "sc_version.h"
+#include "sc_html_parser.h"
 
 #include "httpd.h"
 #include "apr_buckets.h"
@@ -22,14 +25,6 @@
 #include "apr_pools.h"
 #include "apr_hash.h"
 #include "apr_lib.h"
-
-#include "sc_common.h"
-#include "sc_config.h"
-#include "sc_log.h"
-#include "sc_mod_filter.h"
-#include "sc_version.h"
-#include "sc_html_parser.h"
-
 
 module AP_MODULE_DECLARE_DATA                styleCombine_module;
 
@@ -76,6 +71,15 @@ typedef struct {
 } CombineCtx;
 
 static void apr_bucket_nothing_free(void *mem) {
+}
+
+static apr_status_t styleCombine_ctx_cleanup(void *data) {
+    CombineCtx *ctx = (CombineCtx *) data;
+    if (ctx) {
+    	SC_BUFF_FREE(ctx->buf);
+    	ctx->buf = NULL;
+    }
+    return APR_SUCCESS;
 }
 
 /**
@@ -220,8 +224,9 @@ static apr_status_t styleCombineOutputFilter(ap_filter_t *f, apr_bucket_brigade 
 	}
 
 	char *contentType = apr_pstrdup(r->pool, r->content_type);
-	if(-1 == is_allowed_contentType(contentType, pConfig->filterCntType)){
-		sc_log_debug(LOG_UNPROCESSED, "===uri[%s] content-type not match filter[%s] value [%s]", r->uri, pConfig->filterCntType, r->content_type);
+	if(0 == is_allowed_contentType(contentType, pConfig->filterCntType)){
+		sc_log_debug(LOG_UNPROCESSED, "===uri[%s] content-type not match filter[%s] value [%s]",
+				r->uri, pConfig->filterCntType, r->content_type);
 		return ap_pass_brigade(f->next, pbbIn);
 	}
 	/**
@@ -260,17 +265,24 @@ static apr_status_t styleCombineOutputFilter(ap_filter_t *f, apr_bucket_brigade 
 			return ap_pass_brigade(f->next, pbbIn);
 		}
 
-		char *contentLen = (char *) apr_table_get(r->headers_out, "Content-Length");
-		if(NULL != contentLen) {
-			long cntLen = apr_atoi64(contentLen);
-			ctx->buf    = buffer_init_size(r->pool, cntLen + 1);
-		} else {
-			ctx->buf    = buffer_init_size(r->pool, DEFAULT_CONTENT_LEN);
+		ctx->buf = (Buffer *) malloc(sizeof(Buffer));
+		ctx->buf->ptr  = NULL;
+		ctx->buf->used = 0;
+		ctx->buf->size = DEFAULT_CONTENT_LEN;
+
+		char *contentLengthStr = (char *) apr_table_get(r->headers_out, "Content-Length");
+		if(NULL != contentLengthStr) {
+			ctx->buf->size = apr_atoi64(contentLengthStr);
 		}
+		ctx->buf->size    = SC_ALIGN_DEFAULT(ctx->buf->size);
+		ctx->buf->ptr     = (char *) malloc(ctx->buf->size);
 
 		if(NULL == ctx->buf) {
 			return ap_pass_brigade(f->next, pbbIn);
 		}
+		//注册释放内存的回调函数
+		apr_pool_cleanup_register(r->pool, ctx, styleCombine_ctx_cleanup, apr_pool_cleanup_null);
+
 		ctx->isHTML = 0;
 		apr_table_unset(r->headers_out, "Content-Length");
 		apr_table_unset(r->headers_out, "Content-MD5");
@@ -292,8 +304,8 @@ static apr_status_t styleCombineOutputFilter(ap_filter_t *f, apr_bucket_brigade 
 			paramConfig->pool      = r->pool;
 			paramConfig->debugMode = debugMode;
 			paramConfig->pConfig   = pConfig;
-			//paramConfig->styleParserTags = styleParserTags;
-			//FIXME: fix this
+			paramConfig->styleParserTags = styleParserTags;
+			paramConfig->globalVariable  = &globalVariable;
 
 			int styleCount = html_parser(paramConfig, ctx->buf, combinedStyleBuf, blockList, r->unparsed_uri);
 			if(0 == styleCount) {
@@ -310,29 +322,26 @@ static apr_status_t styleCombineOutputFilter(ap_filter_t *f, apr_bucket_brigade 
 			if(IS_LOG_ENABLED(LOG_TIME_COSTED)) {
 				gettimeofday(&ctx->etime, NULL);
 				long usedtime = 1000000 * ( ctx->etime.tv_sec - ctx->btime.tv_sec ) + ctx->etime.tv_usec - ctx->btime.tv_usec;
-
 				sc_log_debug(LOG_TIME_COSTED, "uri[%s] pid[%d] styleCount[%d] recSize[%d] sendSize[%d] costTime[%ld micro_sec][%ld mill_sec]",
 						r->uri, getpid(), styleCount, ctx->buf->used, totoalLen, usedtime, usedtime/1000);
 			}
+
 			return ap_pass_brigade(f->next, ctx->pbbOut);
 		}
 		const char *data;
 		apr_size_t  len;
 		apr_bucket_read(pbktIn, &data, &len, APR_BLOCK_READ);
 
-		// 如果返回内容中没有以<号打头，就表示不是一个html语言，所以不进行处理。空格换行除外
 		if(!ctx->isHTML && NULL != data) {
-			char *tempData = (char *) data;
-			while(isspace(*tempData)) {
-				tempData++;
-			}
-			if(*tempData != '<') {
+			// 如果返回内容中没有以<号打头，就表示不是一个html语言，所以不进行处理。空格换行除外
+			if(0 == sc_is_html_data(data)) {
 				apr_table_setn(r->notes, STYLE_COMBINE_NAME, "ok");
 				return ap_pass_brigade(f->next, pbbIn);
 			}
 			ctx->isHTML    = 1;
 		}
-		string_append(r->pool, ctx->buf, (char *) data, len);
+
+		string_append_content(ctx->buf, (char *) data, len);
 		apr_bucket_delete(pbktIn);
 	}
 	return OK;

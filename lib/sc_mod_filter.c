@@ -7,9 +7,9 @@
 #include "sc_common.h"
 #include "sc_mod_filter.h"
 
-int is_allowed_contentType(char *contentType, char *allowedContentType) {
+short is_allowed_contentType(char *contentType, char *allowedContentType) {
 	if(NULL == allowedContentType || NULL == contentType) {
-		return -1;
+		return 0;
 	}
 	char *pt = contentType;
 	for(; pt && *pt; ++pt) {
@@ -22,9 +22,9 @@ int is_allowed_contentType(char *contentType, char *allowedContentType) {
 		break;
 	}
 	if(NULL != strstr(allowedContentType, contentType)) {
-		return 0;
+		return 1;
 	}
-	return -1;
+	return 0;
 }
 
 short is_param_disabled_mod(char *uriQuery) {
@@ -41,7 +41,7 @@ short is_param_disabled_mod(char *uriQuery) {
 	return (short) debugMode;
 }
 
-int string_matcher_by_regex(char *uri, LinkedList *list) {
+short string_matcher_by_regex(char *uri, LinkedList *list) {
 	/*
 	ListNode *node = list->first;
 	for(; NULL != node; node = node->next) {
@@ -82,4 +82,18 @@ short is_filter_uri(char *uri, LinkedList *blackList, LinkedList *whiteList) {
 		}
 	}
 	return 0;
+}
+
+short sc_is_html_data(const char *data) {
+	if(NULL == data) {
+		return 0;
+	}
+	char *tempData = (char *) data;
+	while(isspace(*tempData)) {
+		tempData++;
+	}
+	if(*tempData != '<') {
+		return 0;
+	}
+	return 1;
 }

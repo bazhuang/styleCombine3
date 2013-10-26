@@ -33,7 +33,7 @@ Buffer *readData(int socketFd, Buffer *buff, int length) {
 	return buff;
 }
 
-int writeData(int socketFd, enum DataProtocol protocolEM, char *data, long len) {
+short writeData(int socketFd, enum DataProtocol protocolEM, char *data, size_t len) {
 	HeadInfo headInfo;
 	headInfo.protocol = (int) protocolEM;
 	headInfo.length   = len;
@@ -61,7 +61,7 @@ int writeData(int socketFd, enum DataProtocol protocolEM, char *data, long len) 
 	return 0;
 }
 
-Buffer *getData(sc_pool_t *pool, enum DataProtocol protocol, void *data, long len) {
+Buffer *getData(sc_pool_t *pool, enum DataProtocol protocol, void *data, size_t len) {
 	int socketFd  = 0;
 	if (-1 == (socketFd = socket(AF_UNIX, SOCK_STREAM, 0))) {
 		sc_log_error("create socket error [%s]", strerror(errno));

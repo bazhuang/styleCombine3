@@ -21,13 +21,13 @@ void checkVersionUpdate(sc_pool_t *server_pool, sc_pool_t *req_pool, GlobalVaria
 		return;
 	}
 
-	apr_thread_mutex_lock(globalVariable->intervalCheckLock);
+	sc_thread_mutex_lock(globalVariable->intervalCheckLock);
 	if(0 != globalVariable->prevTime && (currentSec - globalVariable->prevTime) <= 20) {
-		apr_thread_mutex_unlock(globalVariable->intervalCheckLock);
+		sc_thread_mutex_unlock(globalVariable->intervalCheckLock);
 		return;
 	}
 	globalVariable->prevTime = currentSec;
-	apr_thread_mutex_unlock(globalVariable->intervalCheckLock);
+	sc_thread_mutex_unlock(globalVariable->intervalCheckLock);
 
 	//socket updator_check
 	Buffer *data = getData(req_pool, UPDATOR_CHECK, NULL, 0);
@@ -64,7 +64,7 @@ void checkVersionUpdate(sc_pool_t *server_pool, sc_pool_t *req_pool, GlobalVaria
 	return;
 }
 
-static Buffer *getAndPut(Buffer *styleUri, GlobalVariable *globalVariable) {
+static Buffer *getIfNullAndPut(Buffer *styleUri, GlobalVariable *globalVariable) {
 
 	if(NULL == globalVariable->styleVersionTable) {
 		sc_log_error("styleVersionTable is NULL or not Ready!");
@@ -77,10 +77,10 @@ static Buffer *getAndPut(Buffer *styleUri, GlobalVariable *globalVariable) {
 	}
 
 	//写数据时锁住hash列表，避免多线程安全
-	apr_thread_mutex_lock(globalVariable->getDataLock);
+	sc_thread_mutex_lock(globalVariable->getDataLock);
 	buf = (Buffer *) apr_hash_get(globalVariable->styleVersionTable, styleUri->ptr, styleUri->used);
 	if(NULL != buf) {
-		apr_thread_mutex_unlock(globalVariable->getDataLock);
+		sc_thread_mutex_unlock(globalVariable->getDataLock);
 		return buf;
 	}
 	Buffer *data = getData(globalVariable->newPool, VERSION_GET, styleUri->ptr, styleUri->used);
@@ -91,20 +91,19 @@ static Buffer *getAndPut(Buffer *styleUri, GlobalVariable *globalVariable) {
 	if(globalVariable->pConfig->printLog == LOG_GET_VERSION) {
 		sc_log_debug(LOG_GET_VERSION, "pid=%d get version URL [%s][%ld] vs[%s]", getpid(), styleUri->ptr, styleUri->used, ((NULL == data) ? "" : data->ptr));
 	}
-	apr_thread_mutex_unlock(globalVariable->getDataLock);
+	sc_thread_mutex_unlock(globalVariable->getDataLock);
 	return data;
 }
 
 Buffer *getStrVersion(sc_pool_t *pool, char *uri, Buffer *styleUri, GlobalVariable *globalVariable) {
-	Buffer *versionBuf = getAndPut(styleUri, globalVariable);
+	Buffer *versionBuf = getIfNullAndPut(styleUri, globalVariable);
 	if(SC_IS_EMPTY_BUFFER(versionBuf) || 1 == versionBuf->used) {
 		sc_log_error("pid=%d styleCombine=can't getVersion:ReqURI:[%s]==>StyleURI:[%s]", getpid(), uri, styleUri->ptr);
 		time_t currentSec;
 		time(&currentSec);
 		versionBuf     = buffer_init_size(pool, 64);
 		//build a dynic version in 6 minutes
-		//apr_snprintf(versionBuf->ptr, versionBuf->size, "%ld", (currentSec / 300));
-		//FIXME: print fix
+		snprintf(versionBuf->ptr, versionBuf->size, "%ld", (currentSec / 300));
 		versionBuf->used = strlen(versionBuf->ptr);
 	}
 	return versionBuf;
@@ -121,8 +120,7 @@ void makeVersion(sc_pool_t *pool, Buffer *buf, Buffer *versionBuf) {
 			SC_BUFFER_CLEAN(versionBuf);
 			int i = 0;
 			for(i = 0; i < 16; i++) {
-				//apr_snprintf(md5, 3, "%02x", digest[i]);
-				//FIXME: snprintf fix
+				snprintf(md5, 3, "%02x", digest[i]);
 				string_append(pool, versionBuf, md5, 2);
 			}
 		}

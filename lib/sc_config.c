@@ -15,8 +15,8 @@ void global_variable_init(sc_pool_t *pool, CombineConfig *pConfig,  GlobalVariab
 	globalVariable->upateTime         = 0;
 	globalVariable->modRunMode        = NULL;
 	globalVariable->pConfig           = pConfig;
-	//apr_thread_mutex_create(&globalVariable.getDataLock, APR_THREAD_MUTEX_DEFAULT, pool);
-	//apr_thread_mutex_create(&globalVariable.intervalCheckLock, APR_THREAD_MUTEX_DEFAULT, pool);
+	sc_thread_mutex_create(&globalVariable->getDataLock, SC_THREAD_MUTEX_DEFAULT, pool);
+	sc_thread_mutex_create(&globalVariable->intervalCheckLock, SC_THREAD_MUTEX_DEFAULT, pool);
 }
 
 void combine_config_init(sc_pool_t *pool, CombineConfig *pConfig) {

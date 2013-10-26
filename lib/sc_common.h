@@ -13,7 +13,6 @@
 #include <unistd.h>
 
 #include "sc_conjoin.h"
-#include "sc_buffer.h"
 
 #define SC_SOCKET_FILE_NAME                   "/tmp/SC_server_socket"
 #define SC_MAX_STRING_LEN                     8192

@@ -570,7 +570,7 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt, Buffer *combinedSty
 
 			//IE条件表达式里面的style不能做去重操作
 			if(isExpression) {
-				styleField->version = getStrVersion(req_pool, unparsed_uri, styleField->styleUri, NULL);
+				styleField->version = getStrVersion(req_pool, unparsed_uri, styleField->styleUri, paramConfig->globalVariable);
 				block               = contentBlock_create_init(req_pool, -1, 0, tnameEnum);
 				block->cntBlock     = buffer_init_size(req_pool, paramConfig->domain->used + styleField->styleUri->used + 100);
 				add(req_pool, blockList, (void *) block);
@@ -583,7 +583,7 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt, Buffer *combinedSty
 				continue;
 			}
 
-			styleField->version = getStrVersion(req_pool, unparsed_uri, styleField->styleUri, NULL);
+			styleField->version = getStrVersion(req_pool, unparsed_uri, styleField->styleUri, paramConfig->globalVariable);
 
 			//当没有使用异步并且又没有设置位置则保持原位不动
 			if(0 == styleField->async && SC_NONE == styleField->position) {

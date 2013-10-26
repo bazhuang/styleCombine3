@@ -9,10 +9,12 @@
 #define SC_CONJOIN_H_
 
 #include <string.h>
+#include <pthread.h>
 
 #include "apr_pools.h"
 #include "apr_hash.h"
-#include "apr_thread_mutex.h"
+
+#define SC_THREAD_MUTEX_DEFAULT  0x0
 
 typedef apr_pool_t   sc_pool_t;
 typedef apr_hash_t   sc_hash_t;
@@ -22,5 +24,11 @@ typedef apr_thread_mutex_t sc_thread_mutex_t;
 void *sc_palloc(sc_pool_t *pool, long size);
 
 void *sc_pcalloc(sc_pool_t *pool, long size);
+
+short sc_thread_mutex_create(sc_thread_mutex_t **mutex, unsigned int flags, apr_pool_t *pool);
+
+short sc_thread_mutex_lock(sc_thread_mutex_t *mutex);
+
+short sc_thread_mutex_unlock(sc_thread_mutex_t *mutex);
 
 #endif /* SC_CONJOIN_H_ */
