@@ -19,5 +19,6 @@ install: mod_styleCombine.la
 	$(APXS) -i $<
 
 clean:
+	rm -rf .libs
 	rm -f `find . -name \*.o -o -name \*.so -o -name \*~ -o -name \*.slo -o -name \*.lo -o -name \*.la -o -name \*.loT`
 	rm -f `find ../lib/ -name \*.o -o -name \*.so -o -name \*~ -o -name \*.slo -o -name \*.lo -o -name \*.la -o -name \*.loT`
