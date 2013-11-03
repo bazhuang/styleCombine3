@@ -4,14 +4,22 @@
 #     Author: zhiwenmizw
 #
 
+# lowercase are commandline args (eg make apxs=/usr/sbin/apxs)
+
+ifneq ($(apxs),)
+APXS=$(apxs)
+else
+APXS=$(shell which apxs 2>/dev/null)
+endif
+
 ifeq ($(APXS),)
-APXS=/Users/zhiwenmizw/pub/installed/httpd-2.2.15/bin/apxs
+APXS=$(shell locate /bin/apxs|tail -1)
 endif
 
 # Note that gcc flags are passed through apxs, so preface with -Wc
 
 
-MY_CFLAGS=-Wc,-Wc,-Wall,-O2
+CFLAGS=-Wc,-Wall,-O2
 
 lib=../lib
 INCLUDES=-I${lib} -I.
@@ -20,7 +28,7 @@ SOURCE_FILES=mod_styleCombine.c sc_conjoin.c ${lib}/sc_buffer.c ${lib}/sc_config
 HEAD_FILES=sc_conjoin.h ${lib}/sc_common.h ${lib}/sc_buffer.h ${lib}/sc_config.h ${lib}/sc_linked_list.h ${lib}/sc_socket.h ${lib}/sc_mod_filter.h ${lib}/sc_version.h ${lib}/sc_html_parser.h ${lib}/sc_combine.h ${lib}/sc_string.h ${lib}/sc_log.h ${lib}/sc_hash.h 
 
 mod_styleCombine.so: $(SOURCE_FILES) $(HEAD_FILES)
-	$(APXS) -c $(INCLUDES) -o mod_styleCombine.so $(SOURCE_FILES)
+	$(APXS) -c $(INCLUDES) -o mod_styleCombine.so $(SOURCE_FILES) $(CFLAGS)
 
 install: mod_styleCombine.la
 	$(APXS) -i $<

@@ -15,7 +15,6 @@
 #include "apr_hash.h"
 
 #define SC_THREAD_MUTEX_DEFAULT  0x0
-#define SC_MD5_DIGESTSIZE 16
 
 typedef apr_pool_t sc_pool_t;
 typedef apr_thread_mutex_t sc_thread_mutex_t;
@@ -34,8 +33,5 @@ short sc_thread_mutex_create(sc_thread_mutex_t **mutex, unsigned int flags,
 short sc_thread_mutex_lock(sc_thread_mutex_t *mutex);
 
 short sc_thread_mutex_unlock(sc_thread_mutex_t *mutex);
-
-short sc_md5(unsigned char digest[SC_MD5_DIGESTSIZE], const void *input,
-		size_t inputLen);
 
 #endif /* SC_CONJOIN_H_ */
