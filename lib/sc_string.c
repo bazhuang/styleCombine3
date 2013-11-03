@@ -11,16 +11,18 @@
  * 拿当前字符串与模式字符串先比较两人最后的字符是否相等，如果相等再比较全部。
  */
 int compare(char *input, char *pattern, int patternLen, short ignorecase) {
-	if(NULL == input || NULL == pattern) {
+	if (NULL == input || NULL == pattern) {
 		return -1;
 	}
 	++input;
-	++pattern; --patternLen;
+	++pattern;
+	--patternLen;
 	char *endChar = input + patternLen - 1;
-	if(*endChar == ZERO_END || tolower(*endChar) != *(pattern + patternLen - 1)) {
+	if (*endChar == ZERO_END
+			|| tolower(*endChar) != *(pattern + patternLen - 1)) {
 		return -1;
 	}
-	if(ignorecase) {
+	if (ignorecase) {
 		return strncasecmp(input, pattern, patternLen);
 	}
 	return memcmp(input, pattern, patternLen);
@@ -29,13 +31,13 @@ int compare(char *input, char *pattern, int patternLen, short ignorecase) {
 /**
  * 字符串分割
  */
-void string_split(sc_pool_t *pool, Buffer *arrays[], int arrayLen,
-		char *string, char *seperator) {
+void string_split(sc_pool_t *pool, Buffer *arrays[], int arrayLen, char *string,
+		char *seperator) {
 	char *item = NULL;
 	int len = 0, i = 0;
 	while (i < arrayLen && (item = strsep(&string, seperator))) {
 		len = strlen(item);
-		if(0 == len) {
+		if (0 == len) {
 			continue;
 		}
 		Buffer *buf = buffer_init_size(pool, len + 1);
@@ -44,7 +46,7 @@ void string_split(sc_pool_t *pool, Buffer *arrays[], int arrayLen,
 	}
 }
 
-int parseargline(char *str, char **pattern) {
+short parseargline(char *str, char **pattern) {
 	char quote;
 	while (isspace(*str)) {
 		++str;
@@ -71,12 +73,41 @@ int parseargline(char *str, char **pattern) {
 }
 
 char *sc_pstrmemdup(sc_pool_t *pool, const char *s, size_t n) {
-    char *res;
-    if (s == NULL) {
-        return NULL;
-    }
-    res = sc_palloc(pool, n + 1);
-    memcpy(res, s, n);
-    res[n] = '\0';
-    return res;
+	char *res;
+	if (s == NULL) {
+		return NULL;
+	}
+	res = sc_palloc(pool, n + 1);
+	memcpy(res, s, n);
+	res[n] = '\0';
+	return res;
+}
+
+char * sc_pstrdup(sc_pool_t *a, const char *s) {
+	char *res;
+	size_t len;
+	if (s == NULL) {
+		return NULL;
+	}
+	len = strlen(s) + 1;
+	res = sc_palloc(a, len);
+	memcpy(res, s, len);
+	return res;
+}
+
+regex_t * pattern_validate_compile(sc_pool_t *pool, const char *string) {
+	if (NULL == string) {
+		return NULL;
+	}
+	char *pt_str = sc_pstrdup(pool, string);
+
+	regex_t *regexp = sc_palloc(pool, sizeof(regex_t));
+
+	char *pattern = NULL;
+	parseargline(pt_str, &pattern);
+	int rc = regcomp(regexp, pattern, REG_EXTENDED | REG_NOSUB | REG_ICASE);
+	if (0 != rc) {
+		return NULL;
+	}
+	return regexp;
 }

@@ -21,9 +21,9 @@
 
 static const char ZERO_END = '\0';
 
-#define ALIGN(size, boundary) \
+#define SC_ALIGN(size, boundary) \
     (((size) + ((boundary) - 1)) & ~((boundary) - 1))
 
-#define SC_ALIGN_DEFAULT(size) APR_ALIGN(size, 8)
+#define SC_ALIGN_DEFAULT(size) SC_ALIGN(size, 8)
 
 #endif /* SC_COMMON_H_ */

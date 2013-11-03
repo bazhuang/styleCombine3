@@ -6,6 +6,8 @@
  * apxs -ic mod_styleCombine.c
  */
 
+#include <regex.h>
+
 #include "sc_common.h"
 #include "sc_config.h"
 #include "sc_log.h"
@@ -22,9 +24,6 @@
 #include "apr_strings.h"
 #include "util_filter.h"
 #include "http_request.h"
-#include "apr_pools.h"
-#include "apr_hash.h"
-#include "apr_lib.h"
 
 module AP_MODULE_DECLARE_DATA                styleCombine_module;
 
@@ -80,6 +79,13 @@ static apr_status_t styleCombine_ctx_cleanup(void *data) {
     	ctx->buf = NULL;
     }
     return APR_SUCCESS;
+}
+
+static apr_status_t regex_cleanup(void *data) {
+	if(data) {
+		regfree((regex_t *) data);
+	}
+	return APR_SUCCESS;
 }
 
 /**
@@ -234,7 +240,7 @@ static apr_status_t styleCombineOutputFilter(ap_filter_t *f, apr_bucket_brigade 
 	 * 添加模块的动态开关，由版本文件内容来控制
 	 */
 	if(NULL != globalVariable.modRunMode && 0 == memcmp(globalVariable.modRunMode, RUN_MODE_STATUS_WITH_LEN)) {
-		checkVersionUpdate(r->server->process->pool, r->pool, &globalVariable);
+		check_version_update(r->server->process->pool, r->pool, &globalVariable);
 		return ap_pass_brigade(f->next, pbbIn);
 	}
 	/**
@@ -288,7 +294,7 @@ static apr_status_t styleCombineOutputFilter(ap_filter_t *f, apr_bucket_brigade 
 		apr_table_unset(r->headers_out, "Content-MD5");
 		//set debugMode value
 		ctx->debugMode = (short) debugMode;
-        checkVersionUpdate(r->server->process->pool, r->pool, &globalVariable);
+        check_version_update(r->server->process->pool, r->pool, &globalVariable);
 	}
 
 	//FIXME:保留trunked传输方式,（未实现）
@@ -340,23 +346,10 @@ static apr_status_t styleCombineOutputFilter(ap_filter_t *f, apr_bucket_brigade 
 			}
 			ctx->isHTML    = 1;
 		}
-
 		string_append_content(ctx->buf, (char *) data, len);
 		apr_bucket_delete(pbktIn);
 	}
 	return OK;
-}
-
-static ap_regex_t * patternValidate(cmd_parms *cmd, const char *arg) {
-	if(NULL == arg) {
-		return NULL;
-	}
-	ap_regex_t *regexp;
-	char *str = apr_pstrdup(cmd->pool, arg);
-	char *pattern = NULL;
-	parseargline(str, &pattern);
-	regexp = ap_pregcomp(cmd->pool, pattern, AP_REG_EXTENDED);
-	return regexp;
 }
 
 static const char *setEnabled(cmd_parms *cmd, void *dummy, int arg) {
@@ -437,20 +430,25 @@ static const char *setPrintLog(cmd_parms *cmd, void *dummy, const char *arg) {
 }
 
 static const char *setBlackList(cmd_parms *cmd, void *in_dconf, const char *arg) {
-	ap_regex_t *regexp = patternValidate(cmd, arg);
+	regex_t *regexp = pattern_validate_compile(cmd->pool, arg);
 	if (!regexp) {
 		return apr_pstrcat(cmd->pool, "blankList: cannot compile regular expression '", arg, "'", NULL);
 	}
+
+	apr_pool_cleanup_register(cmd->pool, (void *) regexp, regex_cleanup,
+	                              apr_pool_cleanup_null);
 	CombineConfig * pConfig = ap_get_module_config(cmd->server->module_config, &styleCombine_module);
 	add(cmd->pool, pConfig->blackList, regexp);
 	return NULL;
 }
 
 static const char *setWhiteList(cmd_parms *cmd, void *in_dconf, const char *arg) {
-	ap_regex_t *regexp = patternValidate(cmd, arg);
+	regex_t *regexp = pattern_validate_compile(cmd->pool, arg);
 	if (!regexp) {
 		return apr_pstrcat(cmd->pool, "whiteList: cannot compile regular expression '", arg, "'", NULL);
 	}
+	apr_pool_cleanup_register(cmd->pool, (void *) regexp, regex_cleanup,
+		                              apr_pool_cleanup_null);
 	CombineConfig * pConfig = ap_get_module_config(cmd->server->module_config, &styleCombine_module);
 	add(cmd->pool, pConfig->whiteList, regexp);
 	return NULL;

@@ -9,6 +9,7 @@
 #include "sc_html_parser.h"
 #include "sc_version.h"
 #include "sc_combine.h"
+#include "sc_config.h"
 
 #define INIT_TAG_CONFIG(tagConfig, stylefield, newDomain, haveNewLine) {\
 	tagConfig->styleField   = stylefield; \
@@ -362,7 +363,7 @@ static int parserTag(ParamConfig *paramConfig, StyleParserTag *ptag, Buffer *max
  * 非异步为：域名下标+URI
  * 异步为：域名下标+URI+组名
  */
-static short isRepeat(sc_pool_t *pool, apr_hash_t *duplicats, StyleField *styleField) {
+static short isRepeat(sc_pool_t *pool, sc_hash_t *duplicats, StyleField *styleField) {
 	if(NULL == duplicats) {
 		return 0;
 	}
@@ -375,19 +376,19 @@ static short isRepeat(sc_pool_t *pool, apr_hash_t *duplicats, StyleField *styleF
 	//add domain area
 	key->ptr[key->used++] = '0' + styleField->domainIndex;
 	string_append(pool, key, styleField->styleUri->ptr, styleField->styleUri->used);
-	if(NULL != apr_hash_get(duplicats, key->ptr, key->used)) {
+	if(NULL != sc_hash_get(duplicats, key->ptr, key->used)) {
 		//if uri has exsit then skiping it
 		return 1;
 	}
 	if(styleField->async) {
 		//add group area
 		string_append(pool, key, styleField->group->ptr, styleField->group->used);
-		if(NULL != apr_hash_get(duplicats, key->ptr, key->used)) {
+		if(NULL != sc_hash_get(duplicats, key->ptr, key->used)) {
 			//if uri has exsit then skiping it
 			return 1;
 		}
 	}
-	apr_hash_set(duplicats, key->ptr, key->used, "1");
+	sc_hash_set(duplicats, key->ptr, key->used, "1");
 	return 0;
 }
 
@@ -403,13 +404,13 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt, Buffer *combinedSty
 	ContentBlock *block   = NULL;
 
 	//用于去重的 hash
-	apr_hash_t *duplicates= apr_hash_make(req_pool);
+	sc_hash_t *duplicates= sc_hash_make(req_pool);
 
 	//用于存放解析出来的style URL 长度为 maxURL的2倍
 	Buffer     *maxUrlBuf    = buffer_init_size(req_pool, pConfig->maxUrlLen * 2);
 
 	//域名数组，用于存放不同域名下的styleMap
-	apr_hash_t *domains[DOMAINS_COUNT] = { NULL, NULL };
+	sc_hash_t *domains[DOMAINS_COUNT] = { NULL, NULL };
 
 	//用于存放 同步（直接加载）的style列表
 	LinkedList *syncStyleList  = linked_list_create(req_pool);
@@ -570,7 +571,7 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt, Buffer *combinedSty
 
 			//IE条件表达式里面的style不能做去重操作
 			if(isExpression) {
-				styleField->version = getStrVersion(req_pool, unparsed_uri, styleField->styleUri, paramConfig->globalVariable);
+				styleField->version = get_string_version(req_pool, unparsed_uri, styleField->styleUri, paramConfig->globalVariable);
 				block               = contentBlock_create_init(req_pool, -1, 0, tnameEnum);
 				block->cntBlock     = buffer_init_size(req_pool, paramConfig->domain->used + styleField->styleUri->used + 100);
 				add(req_pool, blockList, (void *) block);
@@ -583,7 +584,7 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt, Buffer *combinedSty
 				continue;
 			}
 
-			styleField->version = getStrVersion(req_pool, unparsed_uri, styleField->styleUri, paramConfig->globalVariable);
+			styleField->version = get_string_version(req_pool, unparsed_uri, styleField->styleUri, paramConfig->globalVariable);
 
 			//当没有使用异步并且又没有设置位置则保持原位不动
 			if(0 == styleField->async && SC_NONE == styleField->position) {
@@ -607,11 +608,11 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt, Buffer *combinedSty
 			 */
 
 			StyleList *styleList = NULL;
-			apr_hash_t *groupsMap = domains[styleField->domainIndex];
+			sc_hash_t *groupsMap = domains[styleField->domainIndex];
 			if(NULL == groupsMap) {
-				domains[styleField->domainIndex] = groupsMap = apr_hash_make(req_pool);
+				domains[styleField->domainIndex] = groupsMap = sc_hash_make(req_pool);
 			} else {
-				styleList = apr_hash_get(groupsMap, styleField->group->ptr, styleField->group->used);
+				styleList = sc_hash_get(groupsMap, styleField->group->ptr, styleField->group->used);
 			}
 
 			if(NULL == styleList || NULL == styleList->list[(int) styleField->styleType]) {
@@ -639,7 +640,7 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt, Buffer *combinedSty
 				/**
 				 * 通过使用hash来控制每个group对应一个list
 				 */
-				apr_hash_set(groupsMap, styleField->group->ptr, styleField->group->used, styleList);
+				sc_hash_set(groupsMap, styleField->group->ptr, styleField->group->used, styleList);
 			} else {
 				add(req_pool, styleList->list[(int) styleField->styleType], styleField);
 			}

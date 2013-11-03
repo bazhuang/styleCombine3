@@ -29,7 +29,7 @@ int addExtStyle(Buffer *destBuf, ParamConfig *paramConfig) {
 	}
 	SC_STRING_APPEND_BUFFER(paramConfig->pool, destBuf, paramConfig->styleField->styleUri);
 	//append version
-	makeVersion(paramConfig->pool, destBuf, paramConfig->styleField->version);
+	make_md5_version(paramConfig->pool, destBuf, paramConfig->styleField->version);
 	//append the version ext
 	if (SC_TYPE_JS == styleField->styleType) {
 		string_append(paramConfig->pool, destBuf, EXT_JS_WITH_LEN);
@@ -108,7 +108,7 @@ void combineStyles(ParamConfig *paramConfig, LinkedList *styleList, Buffer *comb
 }
 
 static void addAsyncStyle(sc_pool_t *pool, Buffer *buf, Buffer *versionBuf, enum StyleType styleType) {
-	makeVersion(pool, buf, versionBuf);
+	make_md5_version(pool, buf, versionBuf);
 	if (SC_TYPE_JS == styleType) {
 		string_append(pool, buf, EXT_JS_WITH_LEN);
 	} else {

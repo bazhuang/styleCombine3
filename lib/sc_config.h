@@ -11,6 +11,7 @@
 #include "sc_common.h"
 #include "sc_linked_list.h"
 #include "sc_string.h"
+#include "sc_hash.h"
 
 #define STYLE_COMBINE_NAME                        "styleCombine"
 #define MODULE_BRAND                               STYLE_COMBINE_NAME"/3.0.0"
