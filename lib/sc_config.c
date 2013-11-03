@@ -55,19 +55,19 @@ void *style_tag_init(sc_pool_t *pool, StyleParserTag *styleParserTags[2]) {
 	//初始化css标签配置
 	long size = sizeof(Buffer);
 	Buffer *cssPrefix   = sc_palloc(pool, size);
-	if(!putValueToBuffer(cssPrefix, "<link")) {
+	if(!put_value_to_buffer(cssPrefix, "<link")) {
 		return NULL;
 	}
 	Buffer *cssRefTag    = sc_palloc(pool, sizeof(Buffer));
-	if(!putValueToBuffer(cssRefTag, " href=")) {
+	if(!put_value_to_buffer(cssRefTag, " href=")) {
 		return NULL;
 	}
 	Buffer *cssCloseTag  = sc_palloc(pool, sizeof(Buffer));
-	if(!putValueToBuffer(cssCloseTag, ">")) {
+	if(!put_value_to_buffer(cssCloseTag, ">")) {
 		return NULL;
 	}
 	Buffer *cssMark      = sc_palloc(pool, sizeof(Buffer));
-	if(!putValueToBuffer(cssMark, "stylesheet")) {
+	if(!put_value_to_buffer(cssMark, "stylesheet")) {
 		return NULL;
 	}
 	cssPtag->prefix      = cssPrefix;
@@ -79,19 +79,19 @@ void *style_tag_init(sc_pool_t *pool, StyleParserTag *styleParserTags[2]) {
 
 	// 初始化js标签配置
 	Buffer *jsPrefix       = sc_palloc(pool, sizeof(Buffer));
-	if(!putValueToBuffer(jsPrefix, "<script")) {
+	if(!put_value_to_buffer(jsPrefix, "<script")) {
 		return NULL;
 	}
 	Buffer *jsCloseTag     = sc_palloc(pool, sizeof(Buffer));
-	if(!putValueToBuffer(jsCloseTag, "</script>")) {
+	if(!put_value_to_buffer(jsCloseTag, "</script>")) {
 		return NULL;
 	}
 	Buffer *jsMark         = sc_palloc(pool, sizeof(Buffer));
-	if(!putValueToBuffer(jsMark, "src")) {
+	if(!put_value_to_buffer(jsMark, "src")) {
 		return NULL;
 	}
 	Buffer *jsRefTag       = sc_palloc(pool, sizeof(Buffer));
-	if(!putValueToBuffer(jsRefTag, " src=")) {
+	if(!put_value_to_buffer(jsRefTag, " src=")) {
 		return NULL;
 	}
 	jsPtag->prefix         = jsPrefix;

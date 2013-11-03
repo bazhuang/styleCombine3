@@ -24,17 +24,18 @@ enum StyleCombineLogEnum {
 	LOG_NET_WRITE          //打印网络写出的数据
 };
 
-#define SC_LOG_PIC(logLevelMask) { \
-	va_list args; \
-	va_start(args, fmt); \
-	sc_log_core(logLevelMask, fmt, args); \
-	va_end(args); \
-}
 
 void sc_log_core(int logLevelMask, const char *fmt, va_list args);
 
 void sc_log_error(const char *fmt, ...);
 
 void sc_log_debug(int currentLogLevel, const char *fmt, ...);
+
+#define SC_LOG_PIC(logLevelMask) { \
+	va_list args; \
+	va_start(args, fmt); \
+	sc_log_core(logLevelMask, fmt, args); \
+	va_end(args); \
+}
 
 #endif /* SC_LOG_H_ */

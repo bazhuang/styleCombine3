@@ -86,7 +86,7 @@ void string_append_content(Buffer *buf, char *str, size_t strLen) {
 	buf->ptr[buf->used] = ZERO_END;
 }
 
-short putValueToBuffer(Buffer *buf, char *str) {
+short put_value_to_buffer(Buffer *buf, char *str) {
 	if (NULL == buf || NULL == str) {
 		return 0;
 	}

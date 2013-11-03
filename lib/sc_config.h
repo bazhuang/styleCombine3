@@ -13,9 +13,6 @@
 #include "sc_string.h"
 #include "sc_hash.h"
 
-#define STYLE_COMBINE_NAME                        "styleCombine"
-#define MODULE_BRAND                               STYLE_COMBINE_NAME"/3.0.0"
-
 #define EXT_JS_WITH_LEN                           ".js", 3
 #define EXT_CSS_WITH_LEN                          ".css", 4
 
@@ -33,7 +30,6 @@
 #define URI_SEPARATOR_WITH_LEN                    ",", 1
 #define URL_URI_SPLIT_WITH_LEN                    "??", 2
 
-#define DEFAULT_CONTENT_LEN                       262144 //1024 << 8
 #define DOMAINS_COUNT                             2
 
 enum StyleType                   { SC_TYPE_CSS, SC_TYPE_JS };

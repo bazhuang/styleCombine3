@@ -56,6 +56,6 @@ void string_append(sc_pool_t *pool, Buffer *buf, char *str, size_t strLen);
 
 void string_append_content(Buffer *buf, char *str, size_t strLen);
 
-short putValueToBuffer(Buffer *buf, char *str);
+short put_value_to_buffer(Buffer *buf, char *str);
 
 #endif /* SC_BUFFER_H_ */

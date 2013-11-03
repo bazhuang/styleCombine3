@@ -41,10 +41,7 @@ void sc_log_core(int logLevelMask, const char *fmt, va_list args) {
 }
 
 void sc_log_error(const char *fmt, ...) {
-	va_list args;
-	va_start(args, fmt);
-	sc_log_core(APLOG_ERR, fmt, args);
-	va_end(args);
+	SC_LOG_PIC(APLOG_ERR);
 }
 
 void sc_log_debug(int currentLogLevel, const char *fmt, ...) {
@@ -55,10 +52,7 @@ void sc_log_debug(int currentLogLevel, const char *fmt, ...) {
 		}
 		logLevelMask = APLOG_ERR;
 	}
-	va_list args;
-	va_start(args, fmt);
-	sc_log_core(logLevelMask, fmt, args);
-	va_end(args);
+	SC_LOG_PIC(logLevelMask);
 }
 
 typedef struct {

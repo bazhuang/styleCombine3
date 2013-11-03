@@ -30,7 +30,7 @@ void check_version_update(sc_pool_t *server_pool, sc_pool_t *req_pool, GlobalVar
 	sc_thread_mutex_unlock(globalVariable->intervalCheckLock);
 
 	//socket updator_check
-	Buffer *data = getData(req_pool, UPDATOR_CHECK, NULL, 0);
+	Buffer *data = get_data(req_pool, UPDATOR_CHECK, NULL, 0);
 	if(SC_IS_EMPTY_BUFFER(data)) {
 		return;
 	}
@@ -83,7 +83,7 @@ static Buffer *get_if_null_and_put(Buffer *styleUri, GlobalVariable *globalVaria
 		sc_thread_mutex_unlock(globalVariable->getDataLock);
 		return buf;
 	}
-	Buffer *data = getData(globalVariable->newPool, VERSION_GET, styleUri->ptr, styleUri->used);
+	Buffer *data = get_data(globalVariable->newPool, VERSION_GET, styleUri->ptr, styleUri->used);
 	if(!SC_IS_EMPTY_BUFFER(data)) {
 		char *key = sc_pstrmemdup(globalVariable->newPool, styleUri->ptr, styleUri->used);
 		sc_hash_set(globalVariable->styleVersionTable, key, styleUri->used, data);

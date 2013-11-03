@@ -12,7 +12,7 @@
 #include "sc_log.h"
 #include "sc_socket.h"
 
-void readHeadInfo(int socketFd, HeadInfo *headInfo) {
+void read_head_info(int socketFd, HeadInfo *headInfo) {
 	int bytes = read(socketFd, headInfo, sizeof(HeadInfo));
 	if (-1 == bytes) {
 		sc_log_error("NET socket read error [%s]", strerror(errno));
@@ -21,7 +21,7 @@ void readHeadInfo(int socketFd, HeadInfo *headInfo) {
 	sc_log_debug(LOG_NET_READ, "NET readed HeadInfo bytes=[%d] p=[%d] len=[%d]", bytes, headInfo->protocol, headInfo->length);
 }
 
-Buffer *readData(int socketFd, Buffer *buff, int length) {
+Buffer *read_data(int socketFd, Buffer *buff, int length) {
 	int bytes = 0;
 	if(-1 == (bytes = read(socketFd, buff->ptr, length))) {
 		sc_log_error("NET socket read error [%s]", strerror(errno));
@@ -33,7 +33,7 @@ Buffer *readData(int socketFd, Buffer *buff, int length) {
 	return buff;
 }
 
-short writeData(int socketFd, enum DataProtocol protocolEM, char *data, size_t len) {
+short write_data(int socketFd, enum DataProtocol protocolEM, char *data, size_t len) {
 	HeadInfo headInfo;
 	headInfo.protocol = (int) protocolEM;
 	headInfo.length   = len;
@@ -61,7 +61,7 @@ short writeData(int socketFd, enum DataProtocol protocolEM, char *data, size_t l
 	return 0;
 }
 
-Buffer *getData(sc_pool_t *pool, enum DataProtocol protocol, void *data, size_t len) {
+Buffer *get_data(sc_pool_t *pool, enum DataProtocol protocol, void *data, size_t len) {
 	int socketFd  = 0;
 	if (-1 == (socketFd = socket(AF_UNIX, SOCK_STREAM, 0))) {
 		sc_log_error("create socket error [%s]", strerror(errno));
@@ -76,12 +76,12 @@ Buffer *getData(sc_pool_t *pool, enum DataProtocol protocol, void *data, size_t 
 		return NULL;
 	}
 
-	if(-1 == writeData(socketFd, protocol, data, len)) {
+	if(-1 == write_data(socketFd, protocol, data, len)) {
 		return NULL;
 	}
 
 	HeadInfo                headInfo;
-	readHeadInfo(socketFd, &headInfo);
+	read_head_info(socketFd, &headInfo);
 
 	if(ERROR_PROTOCAL == headInfo.protocol) {
 		sc_log_error("getData but Result is errorCode %s %ld", data, len);
@@ -89,7 +89,7 @@ Buffer *getData(sc_pool_t *pool, enum DataProtocol protocol, void *data, size_t 
 	}
 
 	Buffer *result     = buffer_init_size(pool, headInfo.length + 1);
-	readData(socketFd, result, headInfo.length);
+	read_data(socketFd, result, headInfo.length);
 
 	close(socketFd);
 	return result;

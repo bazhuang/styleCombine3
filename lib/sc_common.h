@@ -14,6 +14,11 @@
 
 #include "sc_conjoin.h"
 
+#define STYLE_COMBINE_NAME                    "styleCombine"
+#define STYLE_COMBINE_VS                      "3.0.0"
+
+#define MODULE_BRAND                          STYLE_COMBINE_NAME STYLE_COMBINE_VS
+
 #define SC_SOCKET_FILE_NAME                   "/tmp/SC_server_socket"
 #define SC_MAX_STRING_LEN                     8192
 #define DOMAINS_COUNT                         2
