@@ -39,18 +39,26 @@
 	RESET(bIndex, eIndex); \
 }
 
-#define STR_TO_POSITION(str, position, posLen) { \
-	posLen = 0; position = SC_NONE; \
-	if(NULL != str) { \
-		if (0 == strncmp(str, POSITION_TOP_WITH_LEN)) { \
-			posLen = 3; position = SC_TOP; \
-		}else if (0 == strncmp(str, POSITION_HEAD_WITH_LEN)) { \
-			posLen = 4; position = SC_HEAD; \
-		} else if (0 == strncmp(str, POSITION_FOOTER_WITH_LEN)) { \
-			posLen = 6; position = SC_FOOTER; \
+/* Glibc substitutes strncmp by a macro when optimization is turned on and
+ * macro arguments are checked before substitution.
+ * so if strncmp is defined, undefine it.
+ */
+#ifdef strncmp
+#undef strncmp
+#endif
+#define STR_TO_POSITION(str, position, posLen) \
+do{ \
+	(posLen) = 0; (position) = SC_NONE; \
+	if(NULL != (str)) { \
+		if (0 == strncmp((str), POSITION_TOP_WITH_LEN)) { \
+			(posLen) = 3; (position) = SC_TOP; \
+		}else if (0 == strncmp((str), POSITION_HEAD_WITH_LEN)) { \
+			(posLen) = 4; (position) = SC_HEAD; \
+		} else if (0 == strncmp((str), POSITION_FOOTER_WITH_LEN)) { \
+			(posLen) = 6; (position) = SC_FOOTER; \
 		} \
 	} \
-}
+}while (0)
 
 static char *tagPatterns[7]    =        { "head", "/head", "/body", "link", "script", "textarea", "!--" };
 static short tagPatternsLen[7] =        { 4, 5, 5, 4, 6, 8, 3 };
