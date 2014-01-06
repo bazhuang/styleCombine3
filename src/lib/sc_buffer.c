@@ -63,6 +63,7 @@ void string_append(sc_pool_t *pool, Buffer *buf, char *str, size_t strLen) {
 	buf->ptr[buf->used] = ZERO_END;
 }
 
+#ifdef SC_HTTPD_PLATFORM
 void string_append_content(Buffer *buf, char *str, size_t strLen) {
 	if(NULL == buf || NULL == str || strLen <= 0) {
 		return;
@@ -85,6 +86,7 @@ void string_append_content(Buffer *buf, char *str, size_t strLen) {
 	buf->used += strLen;
 	buf->ptr[buf->used] = ZERO_END;
 }
+#endif
 
 short put_value_to_buffer(Buffer *buf, char *str) {
 	if (NULL == buf || NULL == str) {

@@ -54,7 +54,9 @@ Buffer *buffer_init_size(sc_pool_t *pool, size_t in_size);
 
 void string_append(sc_pool_t *pool, Buffer *buf, char *str, size_t strLen);
 
+#ifdef SC_HTTPD_PLATFORM
 void string_append_content(Buffer *buf, char *str, size_t strLen);
+#endif
 
 short put_value_to_buffer(Buffer *buf, char *str);
 

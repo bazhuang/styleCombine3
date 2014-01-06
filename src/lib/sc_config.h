@@ -30,7 +30,6 @@
 #define URI_SEPARATOR_WITH_LEN                    ",", 1
 #define URL_URI_SPLIT_WITH_LEN                    "??", 2
 
-#define DOMAINS_COUNT                             2
 
 enum StyleType                   { SC_TYPE_CSS, SC_TYPE_JS };
 /*position char */
@@ -88,7 +87,9 @@ typedef struct {
 } ContentBlock;
 
 typedef struct  {
+#ifndef SC_NGINX_PLATFORM
 	sc_thread_mutex_t   *getDataLock, *intervalCheckLock;
+#endif
 	time_t               prevTime;
 	time_t               upateTime;
 	sc_pool_t           *newPool, *oldPool;

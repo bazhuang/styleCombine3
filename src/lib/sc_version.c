@@ -21,13 +21,19 @@ void check_version_update(sc_pool_t *server_pool, sc_pool_t *req_pool, GlobalVar
 		return;
 	}
 
+#ifndef SC_NGINX_PLATFORM
 	sc_thread_mutex_lock(globalVariable->intervalCheckLock);
+#endif
 	if(0 != globalVariable->prevTime && (currentSec - globalVariable->prevTime) <= 20) {
+#ifndef SC_NGINX_PLATFORM
 		sc_thread_mutex_unlock(globalVariable->intervalCheckLock);
+#endif
 		return;
 	}
 	globalVariable->prevTime = currentSec;
+#ifndef SC_NGINX_PLATFORM
 	sc_thread_mutex_unlock(globalVariable->intervalCheckLock);
+#endif
 
 	//socket updator_check
 	Buffer *data = get_data(req_pool, UPDATOR_CHECK, NULL, 0);
@@ -76,11 +82,15 @@ static Buffer *get_if_null_and_put(Buffer *styleUri, GlobalVariable *globalVaria
 		return buf;
 	}
 
+#ifndef SC_NGINX_PLATFORM
 	//写数据时锁住hash列表，避免多线程安全
 	sc_thread_mutex_lock(globalVariable->getDataLock);
+#endif
 	buf = (Buffer *) sc_hash_get(globalVariable->styleVersionTable, styleUri->ptr, styleUri->used);
 	if(NULL != buf) {
+#ifndef SC_NGINX_PLATFORM
 		sc_thread_mutex_unlock(globalVariable->getDataLock);
+#endif
 		return buf;
 	}
 	Buffer *data = get_data(globalVariable->newPool, VERSION_GET, styleUri->ptr, styleUri->used);
@@ -91,7 +101,9 @@ static Buffer *get_if_null_and_put(Buffer *styleUri, GlobalVariable *globalVaria
 	if(globalVariable->pConfig->printLog == LOG_GET_VERSION) {
 		sc_log_debug(LOG_GET_VERSION, "pid=%d get version URL [%s][%ld] vs[%s]", getpid(), styleUri->ptr, styleUri->used, ((NULL == data) ? "" : data->ptr));
 	}
+#ifndef SC_NGINX_PLATFORM
 	sc_thread_mutex_unlock(globalVariable->getDataLock);
+#endif
 	return data;
 }
 

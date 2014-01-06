@@ -253,7 +253,8 @@ static apr_status_t styleCombineOutputFilter(ap_filter_t *f, apr_bucket_brigade 
 	}
 
 	if (NULL == ctx) {
-		ctx = f->ctx = sc_palloc(r->pool, sizeof(*ctx));
+		//ctx = f->ctx = sc_palloc(r->pool, sizeof(*ctx));
+		ctx = f->ctx = sc_palloc(r->pool, sizeof(CombineCtx));
 		if(NULL == ctx) {
 			return ap_pass_brigade(f->next, pbbIn);
 		}
@@ -266,6 +267,9 @@ static apr_status_t styleCombineOutputFilter(ap_filter_t *f, apr_bucket_brigade 
 		}
 
 		ctx->buf = (Buffer *) malloc(sizeof(Buffer));
+		if(NULL == ctx->buf) {
+			return ap_pass_brigade(f->next, pbbIn);
+		}
 		ctx->buf->ptr  = NULL;
 		ctx->buf->used = 0;
 		ctx->buf->size = DEFAULT_CONTENT_LEN;
@@ -276,10 +280,10 @@ static apr_status_t styleCombineOutputFilter(ap_filter_t *f, apr_bucket_brigade 
 		}
 		ctx->buf->size    = SC_ALIGN_DEFAULT(ctx->buf->size);
 		ctx->buf->ptr     = (char *) malloc(ctx->buf->size);
-
-		if(NULL == ctx->buf) {
+		if(NULL == ctx->buf->ptr) {
 			return ap_pass_brigade(f->next, pbbIn);
 		}
+
 		//注册释放内存的回调函数
 		apr_pool_cleanup_register(r->pool, ctx, styleCombine_ctx_cleanup, apr_pool_cleanup_null);
 

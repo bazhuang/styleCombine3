@@ -1,0 +1,49 @@
+/* 
+ * Copyright (C) Bryton Lee 
+ */
+
+#include <ngx_config.h>
+#include <ngx_core.h>
+#include <ngx_http.h>
+
+#include "sc_config.h"
+
+#define NGX_HTTP_STYLECOMBINE_START     0
+#define NGX_HTTP_STYLECOMBINE_READ      1
+#define NGX_HTTP_STYLECOMBINE_PROCESS   2
+#define NGX_HTTP_STYLECOMBINE_PASS      3
+#define NGX_HTTP_STYLECOMBINE_DONE      4
+
+
+#define NGX_HTTP_SYTLECOMBINE_BUFFERED 0x01
+
+
+/* module defined struct and function prototypes put here. */
+typedef struct {
+    ngx_flag_t           enable;
+    ngx_str_t            app_name;
+    ngx_array_t          *old_domains;
+    ngx_array_t          *new_domains;
+    ngx_str_t            *filter_cntx_type;
+    ngx_array_t          *async_var_names;
+
+    ngx_int_t            max_url_len;
+    ngx_str_t            *black_lst;
+    ngx_str_t            *white_lst;
+
+    StyleParserTag   *styleParserTags[2]
+    GlobalVariable       sc_global_config;
+} ngx_http_stylecombine_conf_t;
+
+typedef struct {
+    u_char                      *page;
+    u_char                      *last;
+
+    size_t                      page_size;
+    ngx_uint_t                  phase;
+    unsigned                    buffered;
+
+    ngx_http_request_t  *request;
+} ngx_http_stylecombine_ctx_t;
+
+void *sc_nginx_module_init(sc_pool_t, ngx_http_stylecombine_conf_t *conf);

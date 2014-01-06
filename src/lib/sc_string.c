@@ -101,8 +101,22 @@ regex_t * pattern_validate_compile(sc_pool_t *pool, const char *string) {
 	}
 	char *pt_str = sc_pstrdup(pool, string);
 
+#ifdef SC_HTTPD_PLATFORM
 	regex_t *regexp = sc_palloc(pool, sizeof(regex_t));
 
+#elif SC_NGINX_PLATFORM
+#include <ngx_config.h>
+#include <ngx_core.h>  
+    ngx_pool_cleanup_t  *cln;
+
+    cln = ngx_pool_cleanup_add(pool, sizeof(regx_t));
+    if (cln == NULL) {                    
+            return NGX_ERROR;                 
+    }                                     
+    regex_t *regexp = cln->data;                                         
+    cln->handler = regfree;
+
+#endif 
 	char *pattern = NULL;
 	parseargline(pt_str, &pattern);
 	int rc = regcomp(regexp, pattern, REG_EXTENDED | REG_NOSUB | REG_ICASE);
