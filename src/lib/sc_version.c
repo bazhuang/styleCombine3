@@ -23,13 +23,12 @@ void check_version_update(sc_pool_t *server_pool, sc_pool_t *req_pool, GlobalVar
 
 #ifndef SC_NGINX_PLATFORM
 	sc_thread_mutex_lock(globalVariable->intervalCheckLock);
-#endif
 	if(0 != globalVariable->prevTime && (currentSec - globalVariable->prevTime) <= 20) {
-#ifndef SC_NGINX_PLATFORM
 		sc_thread_mutex_unlock(globalVariable->intervalCheckLock);
-#endif
 		return;
 	}
+#endif
+
 	globalVariable->prevTime = currentSec;
 #ifndef SC_NGINX_PLATFORM
 	sc_thread_mutex_unlock(globalVariable->intervalCheckLock);

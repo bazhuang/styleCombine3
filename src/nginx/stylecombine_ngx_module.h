@@ -43,7 +43,8 @@ typedef struct {
     ngx_uint_t                  phase;
     unsigned                    buffered;
 
+    short                       isHTML;
     ngx_http_request_t  *request;
 } ngx_http_stylecombine_ctx_t;
 
-void *sc_nginx_module_init(sc_pool_t, ngx_http_stylecombine_conf_t *conf);
+void *nginx_sc_module_init(sc_pool_t, ngx_http_stylecombine_conf_t *conf);

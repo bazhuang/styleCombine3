@@ -53,7 +53,7 @@ inline short sc_pool_create(sc_pool_t **newpool, sc_pool_t *parent)
     if ( NULL = newpool || NULL = parent)
         return ret;
 
-    /* Nginx create a new pool dose not need a parent pool */
+    /* Nginx create a new pool need not a parent pool */
     *newpool = parent; 
 
     return 0;
