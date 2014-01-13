@@ -15,7 +15,7 @@
 #define NGX_HTTP_STYLECOMBINE_DONE      4
 
 
-#define NGX_HTTP_SYTLECOMBINE_BUFFERED 0x01
+#define NGX_HTTP_STYLECOMBINE_BUFFERED 0x01
 
 
 /* module defined struct and function prototypes put here. */
@@ -24,14 +24,14 @@ typedef struct {
     ngx_str_t            app_name;
     ngx_array_t          *old_domains;
     ngx_array_t          *new_domains;
-    ngx_str_t            *filter_cntx_type;
+    ngx_str_t            filter_cntx_type;
     ngx_array_t          *async_var_names;
 
     ngx_int_t            max_url_len;
-    ngx_str_t            *black_lst;
-    ngx_str_t            *white_lst;
+    ngx_str_t            black_lst;
+    ngx_str_t            white_lst;
 
-    StyleParserTag   *styleParserTags[2]
+    StyleParserTag   *styleParserTags[2];
     GlobalVariable       sc_global_config;
 } ngx_http_stylecombine_conf_t;
 
@@ -47,4 +47,4 @@ typedef struct {
     ngx_http_request_t  *request;
 } ngx_http_stylecombine_ctx_t;
 
-void *nginx_sc_module_init(sc_pool_t, ngx_http_stylecombine_conf_t *conf);
+void *nginx_sc_module_init(sc_pool_t*, ngx_http_stylecombine_conf_t *conf);

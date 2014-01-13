@@ -55,8 +55,7 @@ void *style_tag_init(sc_pool_t *pool, StyleParserTag *styleParserTags[2]) {
 		return NULL;
 	}
 	//初始化css标签配置
-	long size = sizeof(Buffer);
-	Buffer *cssPrefix   = sc_palloc(pool, size);
+	Buffer *cssPrefix   = sc_palloc(pool, sizeof(Buffer));
 	if(!put_value_to_buffer(cssPrefix, "<link")) {
 		return NULL;
 	}

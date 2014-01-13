@@ -55,7 +55,7 @@ unsigned int sc_hashfunc_default(const char *char_key, size_t *klen) {
 	const unsigned char *p;
 	size_t i;
 
-	if (*klen == -1) {
+	if (*klen == (size_t) -1) {
 		for (p = key; *p; p++) {
 			hash = hash * 33 + *p;
 		}

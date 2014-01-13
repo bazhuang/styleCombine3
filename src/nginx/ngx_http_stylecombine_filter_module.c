@@ -3,9 +3,12 @@
  */
 
 #include "stylecombine_ngx_module.h"
+#include "sc_mod_filter.h"
+#include "sc_version.h"
+#include "sc_html_parser.h"
 
 static void *ngx_http_stylecombine_create_conf(ngx_conf_t *cf);
-static void *ngx_http_stylecombine_merge_conf(ngx_conf_t *cf,void *parent, void *child);
+static char *ngx_http_stylecombine_merge_conf(ngx_conf_t *cf,void *parent, void *child);
 static ngx_int_t ngx_http_stylecombine_filter_init(ngx_conf_t *cf); 
 static ngx_int_t ngx_http_stylecombine_header_filter(ngx_http_request_t *r);
 static ngx_int_t ngx_http_stylecombine_body_filter(ngx_http_request_t *r, ngx_chain_t *in);
@@ -125,16 +128,16 @@ ngx_http_stylecombine_create_conf(ngx_conf_t *cf)
     }                                                          
                                                                
     conf->enable = NGX_CONF_UNSET;                             
-    ngx_str_null(conf->app_name);
+    ngx_str_null(&conf->app_name);
     conf->old_domains = NGX_CONF_UNSET_PTR;
     conf->new_domains = NGX_CONF_UNSET_PTR;
-    conf->filter_cntx_type = NGX_CONF_UNSET_PTR;
+    ngx_str_null(&conf->filter_cntx_type);
     conf->async_var_names = NGX_CONF_UNSET_PTR;
     conf->max_url_len = NGX_CONF_UNSET;
-    conf->black_lst = NGX_CONF_UNSET_PTR;
-    conf->white_lst = NGX_CONF_UNSET_PTR;
+    ngx_str_null(&conf->black_lst);
+    ngx_str_null(&conf->white_lst);
     
-    if ( NULL == nginx_sc_module_init(cf->pool, conf) )
+    if ( NULL == nginx_sc_module_init((sc_pool_t *)cf->pool, conf) )
         return NULL;
 
     return conf;                                               
@@ -145,7 +148,7 @@ static Buffer * ngx_sc_array_to_buffer(ngx_pool_t *pool, ngx_array_t *array,  ng
     Buffer *tmp_buf = NULL;
     ngx_str_t *tmp_str = NULL;
 
-    if ( NULL == pool || NULL == array || array->nelts < index) 
+    if ( NULL == pool || NULL == array || array->nelts < (ngx_uint_t)index) 
         return NULL;
     
     tmp_str = (ngx_str_t*)((u_char *)array->elts + index * array->size);
@@ -153,8 +156,8 @@ static Buffer * ngx_sc_array_to_buffer(ngx_pool_t *pool, ngx_array_t *array,  ng
     if ( NULL == tmp_buf )
         return NULL;
 
-    string_append(pool, tmp_buf, tmp_str->data, tmp_str->len);
-    if (NULL == tmp_buff->ptr)
+    string_append(pool, tmp_buf, (char *)tmp_str->data, tmp_str->len);
+    if (NULL == tmp_buf->ptr)
         return NULL;
 
     return tmp_buf;
@@ -167,11 +170,11 @@ static int ngx_sc_setWhiteList(sc_pool_t *pool, CombineConfig *sc_conf, ngx_str_
         NULL == arg )
         return -1;
 
-    regex_t *regexp = pattern_validate_compile(pool, arg->data);
+    regex_t *regexp = pattern_validate_compile(pool, (const char *)arg->data);
     if (!regexp) {
         return -1;
     }
-    add(pool, pConfig->whiteList, regexp);
+    add(pool, sc_conf->whiteList, regexp);
     return 0;
 }
 
@@ -182,43 +185,42 @@ static int ngx_sc_setBlackList(sc_pool_t *pool, CombineConfig *sc_conf, ngx_str_
         NULL == arg )
         return -1;
 
-    regex_t *regexp = pattern_validate_compile(pool, arg->data);
+    regex_t *regexp = pattern_validate_compile(pool, (const char *)arg->data);
     if (!regexp) {
         return -1;
     }
-    add(pool, pConfig->blackList, regexp);
+    add(pool, sc_conf->blackList, regexp);
     return 0;
 }
 
-static void *ngx_http_stylecombine_merge_conf(ngx_conf_t *cf,void *parent, void *child)
+static char *ngx_http_stylecombine_merge_conf(ngx_conf_t *cf,void *parent, void *child)
 {
     ngx_http_stylecombine_conf_t *prev = parent;
     ngx_http_stylecombine_conf_t *conf = child;    
     CombineConfig  *sc_conf;
     ngx_int_t i, saved_count;
-    Buffer  *tmpbuf = NULL;
 
-    sc_conf = conf->sc_global_config->pConfig;
+    sc_conf = conf->sc_global_config.pConfig;
 
     /* enable */
     ngx_conf_merge_value(conf->enable, prev->enable, 0);
-    sc_conf->enabled = (short )config->enable;
+    sc_conf->enabled = (short )conf->enable;
 
     /* appname */
     ngx_str_t sc_app_unknow = ngx_string("SC_APP_NAME_UNKNOW");
-    ngx_conf_merge_str_value(conf->app_name, pre->app_name "SC_APP_NAME_UNKNOW");
-    if ( ngx_strncmp(conf->app_name, sc_app_unknow, sc_app_unknow.len) == 0 )
+    ngx_conf_merge_str_value(conf->app_name, prev->app_name, "SC_APP_NAME_UNKNOW");
+    if ( ngx_strncmp(conf->app_name.data, sc_app_unknow.data, sc_app_unknow.len) == 0 )
         return NGX_CONF_ERROR;
-    sc_conf->app_name = buffer_init_size(cf->pool, conf->app_name.len+1);
-    if( NULL == sc_conf->app_name )
+    sc_conf->appName = buffer_init_size(cf->pool, conf->app_name.len+1);
+    if( NULL == sc_conf->appName )
         return NGX_CONF_ERROR;
-    string_append(cf->pool, sc_conf->app_name, conf->app_name.data, conf->app_name.len);
+    string_append(cf->pool, sc_conf->appName, (char *)conf->app_name.data, conf->app_name.len);
 
     /* old domains */
-    ngx_conf_merge_ptr_value(conf->old_domains, pre->old_domains, NGX_CONF_UNSET_PTR);
+    ngx_conf_merge_ptr_value(conf->old_domains, prev->old_domains, NGX_CONF_UNSET_PTR);
     if ( conf->old_domains == NGX_CONF_UNSET_PTR )
         return NGX_CONF_ERROR;
-    for(i = 0; i < DOMAINS_COUNT && i <= conf->old_domains->nelts; i++ ) {
+    for(i = 0; i < DOMAINS_COUNT && (ngx_uint_t)i < conf->old_domains->nelts; i++ ) {
         sc_conf->oldDomains[i] = ngx_sc_array_to_buffer(cf->pool, conf->old_domains, i);
         if (NULL == sc_conf->oldDomains[i])
             return NGX_CONF_ERROR;
@@ -229,11 +231,11 @@ static void *ngx_http_stylecombine_merge_conf(ngx_conf_t *cf,void *parent, void 
     saved_count = i;
 
     /* new domains */
-    ngx_conf_merge_ptr_value(conf->new_domains, pre->new_domains, NGX_CONF_UNSET_PTR);
+    ngx_conf_merge_ptr_value(conf->new_domains, prev->new_domains, NGX_CONF_UNSET_PTR);
     if ( conf->new_domains == NGX_CONF_UNSET_PTR )
         return NGX_CONF_ERROR;
-    for( i = 0; i < DOMAINS_COUNT && i < conf->new_domains->nelts; i++ ) {
-        sc_conf->newDomain[i] = ngx_sc_array_to_buffer(cf->pool, conf->new_domains, i);
+    for( i = 0; i < DOMAINS_COUNT && (ngx_uint_t) i < conf->new_domains->nelts; i++ ) {
+        sc_conf->newDomains[i] = ngx_sc_array_to_buffer(cf->pool, conf->new_domains, i);
         if ( NULL == sc_conf->newDomains[i] )
             return NGX_CONF_ERROR;
 
@@ -246,19 +248,15 @@ static void *ngx_http_stylecombine_merge_conf(ngx_conf_t *cf,void *parent, void 
 
     /* filter content type */
     ngx_str_t sc_filter_cntx_type_unknow = ngx_string("SC_FILTER_CNTX_TYPE_UNKNOW");
-    ngx_conf_merge_str_value(conf->filter_cntx_type, pre->filter_cntx_type,  \
+    ngx_conf_merge_str_value(conf->filter_cntx_type, prev->filter_cntx_type,  \
             "SC_FILTER_CNTX_TYPE_UNKNOW");
-    if ( ngx_strncmp(conf->filter_cntx_type, sc_filter_cntx_type_unknow, \
+    if ( ngx_strncmp(conf->filter_cntx_type.data, sc_filter_cntx_type_unknow.data, \
                 sc_filter_cntx_type_unknow.len) == 0 )
         return NGX_CONF_ERROR;
-    sc_conf->filterCntType = buffer_init_size(cf->pool, conf->filter_cntx_type.len+1);
-    if ( NULL == sc_conf->filterCntType )
-        return NGX_CONF_ERROR;
-    string_append(cf->pool, sc_conf->filterCntType, conf->filter_cntx_type.data, \
-            conf->filter_cntx_type.len);
+    sc_conf->filterCntType = (char *)conf->filter_cntx_type.data;
 
     /* async variable names */
-    ngx_conf_merge_ptr_value(conf->async_var_names, pre->async_var_names, NGX_CONF_UNSET_PTR);
+    ngx_conf_merge_ptr_value(conf->async_var_names, prev->async_var_names, NGX_CONF_UNSET_PTR);
     if ( conf->async_var_names == NGX_CONF_UNSET_PTR )
         return NGX_CONF_ERROR;
     for ( i = 0; i < saved_count; i++ ) {
@@ -269,23 +267,23 @@ static void *ngx_http_stylecombine_merge_conf(ngx_conf_t *cf,void *parent, void 
     }
 
     /* max url len */
-    ngx_conf_merge_value(conf->max_url_len, pre->max_url_len, 1500);
-    sc_conf->maxUrlLen = conf->max_url_len; 
+    ngx_conf_merge_value(conf->max_url_len, prev->max_url_len, 1024);
+    sc_conf->maxUrlLen = (int)conf->max_url_len; 
 
     /* black list */
     ngx_str_t sc_black_lst_unknow = ngx_string("SC_BLACK_LST_UNKNOW");
-    ngx_conf_merge_str_value(conf->black_lst, pre->black_lst, "SC_BLACK_LST_UNKNOW");
-    if ( ngx_strncmp(conf->black_lst, sc_black_lst_unknow, sc_black_lst_unknow.len) == 0 )
+    ngx_conf_merge_str_value(conf->black_lst, prev->black_lst, "SC_BLACK_LST_UNKNOW");
+    if ( ngx_strncmp(conf->black_lst.data, sc_black_lst_unknow.data, sc_black_lst_unknow.len) == 0 )
         return NGX_CONF_ERROR;
-    if ( ngx_sc_setBlackList(cf->pool, sc_conf, conf->black_lst) )
+    if ( ngx_sc_setBlackList(cf->pool, sc_conf, &conf->black_lst) )
         return NGX_CONF_ERROR;
 
     /* white list */
     ngx_str_t sc_white_lst_unknow = ngx_string("SC_WHITE_LST_UNKNOW");
-    ngx_conf_merge_str_value(conf->white_lst, pre->white_lst, "SC_WHITE_LST_UNKNOW");
-    if ( ngx_strncmp(conf->white_lst, sc_white_lst_unknow, sc_white_lst_unknow.len) == 0 )
+    ngx_conf_merge_str_value(conf->white_lst, prev->white_lst, "SC_WHITE_LST_UNKNOW");
+    if ( ngx_strncmp(conf->white_lst.data, sc_white_lst_unknow.data, sc_white_lst_unknow.len) == 0 )
         return NGX_CONF_ERROR;
-    if ( ngx_sc_setWhiteList(cf->pool, sc_conf, conf->white_lst) )
+    if ( ngx_sc_setWhiteList(cf->pool, sc_conf, &conf->white_lst) )
         return NGX_CONF_ERROR;
     
     return NGX_CONF_OK;
@@ -310,7 +308,6 @@ ngx_http_stylecombine_header_filter(ngx_http_request_t *r)
     ngx_http_stylecombine_ctx_t   *ctx;                                        
     ngx_http_stylecombine_conf_t  *conf;                                       
     CombineConfig   *sc_conf;
-    off_t                          len;
                                                                        
     conf = ngx_http_get_module_loc_conf(r, ngx_http_stylecombine_filter_module);
                                                                        
@@ -326,23 +323,21 @@ ngx_http_stylecombine_header_filter(ngx_http_request_t *r)
         return ngx_http_next_header_filter(r);                         
     }                                                                  
 
-    sc_conf = conf->sc_global_config->pConfig;
+    sc_conf = conf->sc_global_config.pConfig;
     if ( !sc_conf  ) {
         return ngx_http_next_header_filter(r);
     }
 
     /* content type */
-    if (conf->filter_cntx_type != NGX_CONF_UNSET_PTR) {
-        if ( r->headers_out.content_type.len != ngx_strlen(conf->filter_cntx_type)
-            || ngx_strncasecmp(r->headers_out.content_type.data, conf->filter_cntx_type, \
-                ngx_strlen(conf->filter_cntx_type)) != 0 ) {
-            return ngx_http_next_header_filter(r);
-        }
+    if ( r->headers_out.content_type.len != conf->filter_cntx_type.len
+        || ngx_strncasecmp(r->headers_out.content_type.data, conf->filter_cntx_type.data, \
+           conf->filter_cntx_type.len) != 0 ) {
+        return ngx_http_next_header_filter(r);
     }
                                                                        
     /* black & white list */
-    if ( is_filter_uri(r->uri.data, sc_conf->blackList, sc_conf->whiteList) ) {
-        ngx_http_next_head_filter(r);
+    if ( is_filter_uri((char *)r->uri.data, sc_conf->blackList, sc_conf->whiteList) ) {
+        ngx_http_next_header_filter(r);
     }
 
     /* alloc per request content */
@@ -354,7 +349,7 @@ ngx_http_stylecombine_header_filter(ngx_http_request_t *r)
     ctx->request = r;                                           
 
     ctx->isHTML = 0;
-    ctx->page_size = len;
+    ctx->page_size = (size_t) r->headers_out.content_length_n;
 
     ngx_http_clear_content_length(r);
 
@@ -370,10 +365,8 @@ ngx_http_stylecombine_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
     int                   rc;                                       
     ngx_chain_t                    out;
     ngx_http_stylecombine_ctx_t  *ctx;                                      
-    ngx_http_stylecombine_conf_t  *conf;                                       
                                                                        
-    conf = ngx_http_get_module_loc_conf(r, ngx_http_stylecombine_filter_module)
-    ctx = ngx_http_get_module_ctx(r, ngx_http_gzip_filter_module);  
+    ctx = ngx_http_get_module_ctx(r, ngx_http_stylecombine_filter_module);  
                                                                     
     if (ctx == NULL || r->header_only) {               
         return ngx_http_next_body_filter(r, in);                    
@@ -403,7 +396,7 @@ ngx_http_stylecombine_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
         }
 
         /* fall through */
-    case NGX_HTTP_IMAGE_PROCESS:
+    case NGX_HTTP_STYLECOMBINE_PROCESS:
 
         out.buf = ngx_http_stylecombine_process(r);
 
@@ -418,7 +411,7 @@ ngx_http_stylecombine_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
 
         return ngx_http_stylecombine_send(r, ctx, &out);
 
-    case NGX_HTTP_IMAGE_PASS:
+    case NGX_HTTP_STYLECOMBINE_PASS:
 
         return ngx_http_next_body_filter(r, in);
 
@@ -440,7 +433,7 @@ ngx_http_stylecombine_read(ngx_http_request_t *r, ngx_chain_t *in)
     ngx_chain_t                  *cl;
     ngx_http_stylecombine_ctx_t  *ctx;
 
-    ctx = ngx_http_get_module_ctx(r, ngx_http_stylecombine_filter_module)
+    ctx = ngx_http_get_module_ctx(r, ngx_http_stylecombine_filter_module);
 
     if (ctx->page == NULL) {
         ctx->page = ngx_palloc(r->pool, ctx->page_size);
@@ -463,7 +456,7 @@ ngx_http_stylecombine_read(ngx_http_request_t *r, ngx_chain_t *in)
 
         if( !ctx->isHTML && size ) {
             /* if page is not HTML, nothing to do */
-            if ( !sc_is_html(b->pos) )    
+            if ( !sc_is_html_data((const char*)b->pos) )    
                 return NGX_OK;
             ctx->isHTML = 1;
         }
@@ -503,10 +496,13 @@ ngx_http_stylecombine_combine_style(ngx_http_request_t *r, ngx_buf_t *b,
             Buffer *combinedStyleBuf[3], LinkedList *blockList) 
 {
 	ListNode      *node = NULL;
-	ngx_int_t     offsetLen = 0, i=0, totalLen = 0;
-    ngx_int_t     rest, size;
+	ngx_int_t     i=0, totalLen = 0;
+    size_t        offsetLen = 0, rest, size;
+    ngx_http_stylecombine_ctx_t  *ctx;                                      
+                                                                       
+    ctx = ngx_http_get_module_ctx(r, ngx_http_stylecombine_filter_module);  
 
-	if(NULL == blockList || NULL == combinedStyleBuf) {
+	if(NULL == blockList || NULL == combinedStyleBuf || NULL == ctx) {
 		return;
 	}
 
@@ -518,7 +514,7 @@ ngx_http_stylecombine_combine_style(ngx_http_request_t *r, ngx_buf_t *b,
     }
     for ( i = 0; i < 3; i++ ) {
         if ( combinedStyleBuf[i] )
-            totalLen += combinedStyleBuf[i].used
+            totalLen += combinedStyleBuf[i]->used;
     }
 
     b->pos = ngx_palloc(r->pool, totalLen);
@@ -531,10 +527,9 @@ ngx_http_stylecombine_combine_style(ngx_http_request_t *r, ngx_buf_t *b,
 		ContentBlock *block = (ContentBlock *) node->value;
 		if(NULL != block->cntBlock) {
 			//totalLen += addBucket(req->connection, ctx->pbbOut, block->cntBlock->ptr, block->cntBlock->used);
-            rest = totalLen - (b->last - b->bops);
+            rest = totalLen - (b->last - b->pos);
             size = (block->cntBlock->used < rest) ? block->cntBlock->used : rest;
-            ngx_cpymem(b->last, block->cntBlock->ptr, size);
-            b->last += block->cntBlock->used;
+            b->last = ngx_cpymem(b->last, block->cntBlock->ptr, size);
 			continue;
 		}
 
@@ -559,18 +554,16 @@ ngx_http_stylecombine_combine_style(ngx_http_request_t *r, ngx_buf_t *b,
 		if(0 != block->bIndex || 0 != block->eIndex) {
 			offsetLen = block->eIndex + 1 - block->bIndex;
 			//totalLen += addBucket(req->connection, ctx->pbbOut, ctx->buf->ptr + block->bIndex, offsetLen);
-            rest = totalLen - (b->last - b->bops);
+            rest = totalLen - (b->last - b->pos);
             size = (offsetLen < rest) ? offsetLen : rest;
-            ngx_cpymem(b->last, ctx->buf->ptr + block->bIndex, size);
-            b->last += offsetLen;
+            b->last = ngx_cpymem(b->last, ctx->page + block->bIndex, size);
 		}
 
 		if(NULL != combinedUriBuf) {
 			//totalLen += addBucket(req->connection, ctx->pbbOut, combinedUriBuf->ptr, combinedUriBuf->used);
-            rest = totalLen - (b->last - b->bops);
+            rest = totalLen - (b->last - b->pos);
             size = (combinedUriBuf->used < rest) ? combinedUriBuf->used : rest;
-            ngx_cpymem(b->last, combinedUriBuf->ptr, size);
-            b->last += offsetLen;
+            b->last = ngx_cpymem(b->last, combinedUriBuf->ptr, size);
 		}
 	}
 }
@@ -593,15 +586,7 @@ ngx_http_stylecombine_process(ngx_http_request_t *r)
     ctx->buffered &= ~NGX_HTTP_STYLECOMBINE_BUFFERED;
 
     conf = ngx_http_get_module_loc_conf(r, ngx_http_stylecombine_filter_module);
-    pConfig = &conf.sc_global_config->pConfig;
-
-    b = ngx_pcalloc(r->pool, sizeof(ngx_buf_t));
-    if (b == NULL) {                            
-        return NULL;                            
-    }                                           
-    
-    b->memory = 1;  
-    b->last_buf = 1;
+    pConfig = conf->sc_global_config.pConfig;
 
     /* create stylecombine block list */
     blockList = linked_list_create(r->pool);
@@ -619,22 +604,31 @@ ngx_http_stylecombine_process(ngx_http_request_t *r)
     paramConfig->globalVariable  = &conf->sc_global_config;
 
     /* init entire page buffer */
-    page_buffer.ptr = ctx->page;
+    page_buffer.ptr = (char *)ctx->page;
     page_buffer.size = page_buffer.used = ctx->page_size;
 
     /* call stylecombine html parser, combinedStyleBuf return combined style */
     rc = html_parser(paramConfig, &page_buffer, combinedStyleBuf, blockList,\
-            r->unparsed_uri.data);
+            (char *)r->unparsed_uri.data);
+
+    b = ngx_pcalloc(r->pool, sizeof(ngx_buf_t));
+    if (b == NULL) {                            
+        return NULL;                            
+    }                                           
+    
+    b->memory = 1;  
+    b->last_buf = 1;
+
     if (rc == 0 ) {
         /* no combined style return, nothing need to do */
-        b->bops = ctx->page;
+        b->pos = ctx->page;
         b->last = ctx->page + ctx->page_size;
         ngx_http_stylecombine_length(r, b);
         return b;
     }
 
     ngx_http_stylecombine_combine_style(r, b, combinedStyleBuf, blockList);
-    if ( !b->bops )
+    if ( !b->pos )
         return NULL;
     ngx_http_stylecombine_length(r, b);
     return b;

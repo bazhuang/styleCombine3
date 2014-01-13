@@ -109,12 +109,12 @@ regex_t * pattern_validate_compile(sc_pool_t *pool, const char *string) {
 #include <ngx_core.h>  
     ngx_pool_cleanup_t  *cln;
 
-    cln = ngx_pool_cleanup_add(pool, sizeof(regx_t));
+    cln = ngx_pool_cleanup_add(pool, sizeof(regex_t));
     if (cln == NULL) {                    
-            return NGX_ERROR;                 
+            return NULL;                 
     }                                     
     regex_t *regexp = cln->data;                                         
-    cln->handler = regfree;
+    cln->handler = (ngx_pool_cleanup_pt)regfree;
 
 #endif 
 	char *pattern = NULL;

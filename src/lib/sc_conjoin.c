@@ -5,9 +5,9 @@
  *      Author: zhiwenmizw
  */
 
-#ifdef SC_HTTPD_PLATFORM
-
 #include "sc_conjoin.h"
+
+#ifdef SC_HTTPD_PLATFORM
 #include "apr_md5.h"
 
 short sc_pool_create(sc_pool_t **newpool, sc_pool_t *parent) {
@@ -50,7 +50,7 @@ inline short sc_pool_create(sc_pool_t **newpool, sc_pool_t *parent)
 {
     short ret = -1;
 
-    if ( NULL = newpool || NULL = parent)
+    if ( NULL == newpool || NULL == parent)
         return ret;
 
     /* Nginx create a new pool need not a parent pool */
@@ -90,8 +90,8 @@ inline short sc_md5(unsigned char digest[SC_MD5_DIGESTSIZE], const void *input,
     ngx_md5_t ctx;
 
     ngx_md5_init(&ctx);
-    ngx_md5_update(&ctx, key, keylen);
-    ngx_md5_final(digest, &ctx);
+    ngx_md5_update(&ctx, input, inputLen);
+    return ngx_md5_final(digest, &ctx);
 }
 
 #endif

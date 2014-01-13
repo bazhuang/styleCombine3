@@ -127,7 +127,8 @@ void combineStylesAsync(ParamConfig *paramConfig, StyleList *styleList, Buffer *
 	headBuf->ptr[headBuf->used++] = '"';
 	string_append(pool, headBuf, styleList->group->ptr, styleList->group->used - 1);
 	string_append(pool, headBuf, "\":{\"css\"", 8);
-	unsigned int i = 0, count = 0;
+	//unsigned int i = 0, count = 0;
+	int i = 0, count = 0;
 	for(i = 0; i < 2; i++) {
 		LinkedList *list = styleList->list[i];
 		if(NULL == list || !list->size) {

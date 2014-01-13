@@ -17,7 +17,7 @@ int prepare_buffer_size(sc_pool_t *pool, Buffer *buf, size_t in_size) {
 	if (NULL == buf) {
 		return 0;
 	}
-	int size = SC_ALIGN_DEFAULT(in_size);
+	size_t size = SC_ALIGN_DEFAULT(in_size);
 	if (size < in_size) {
 		return 0;
 	}
