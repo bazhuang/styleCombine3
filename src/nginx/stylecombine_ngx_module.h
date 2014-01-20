@@ -17,6 +17,9 @@
 
 #define NGX_HTTP_STYLECOMBINE_BUFFERED 0x01
 
+#define NGX_HTTP_STYLECOMBINE_NONE      0
+#define NGX_HTTP_STYLECOMBINE_HTML      1
+
 
 /* module defined struct and function prototypes put here. */
 typedef struct {

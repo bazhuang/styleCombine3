@@ -19,6 +19,9 @@ void global_variable_init(sc_pool_t *pool, CombineConfig *pConfig,  GlobalVariab
 	sc_thread_mutex_create(&globalVariable->getDataLock, SC_THREAD_MUTEX_DEFAULT, pool);
 	sc_thread_mutex_create(&globalVariable->intervalCheckLock, SC_THREAD_MUTEX_DEFAULT, pool);
 #endif
+#ifdef SC_NGINX_PLATFORM
+    globalVariable->server_pool = NULL;
+#endif
 }
 
 void combine_config_init(sc_pool_t *pool, CombineConfig *pConfig) {

@@ -63,6 +63,7 @@ short write_data(int socketFd, enum DataProtocol protocolEM, char *data, size_t 
 
 Buffer *get_data(sc_pool_t *pool, enum DataProtocol protocol, void *data, size_t len) {
 	int socketFd  = 0;
+    
 	if (-1 == (socketFd = socket(AF_UNIX, SOCK_STREAM, 0))) {
 		sc_log_error("create socket error [%s]", strerror(errno));
 		return NULL;
@@ -71,8 +72,9 @@ Buffer *get_data(sc_pool_t *pool, enum DataProtocol protocol, void *data, size_t
 	address.sun_family      = AF_UNIX;
 	strcpy(address.sun_path, SC_SOCKET_FILE_NAME);
 	if(-1 == connect(socketFd, (struct sockaddr *) &address, sizeof(address))) {
-		close(socketFd);
 		sc_log_error("create connect error [%s][%s]", address.sun_path, strerror(errno));
+
+		close(socketFd);
 		return NULL;
 	}
 

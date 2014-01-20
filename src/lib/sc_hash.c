@@ -73,13 +73,18 @@ static sc_hash_entry_t **alloc_array(sc_hash_t *ht, unsigned int max) {
 }
 
 sc_hash_t * sc_hash_make(sc_pool_t *pool) {
-	sc_hash_t *ht;
+	sc_hash_t *ht = NULL;
 	ht = sc_palloc(pool, sizeof(sc_hash_t));
+    if (!ht)
+        return NULL;
+
 	ht->pool = pool;
 	ht->free = NULL;
 	ht->count = 0;
 	ht->max = 15;
 	ht->array = alloc_array(ht, ht->max);
+    if ( !ht->array )
+        return NULL;
 	ht->hash_func = sc_hashfunc_default;
 	return ht;
 }
@@ -166,7 +171,7 @@ void * sc_hash_get(sc_hash_t *ht, const void *key, size_t klen) {
 	he = *find_entry(ht, key, klen, NULL);
 	if (he)
 		return (void *) he->val;
-	else
+    else
 		return NULL;
 }
 

@@ -59,6 +59,10 @@ void check_version_update(sc_pool_t *server_pool, sc_pool_t *req_pool, GlobalVar
 	}
 	globalVariable->newPool = newPool;
 	sc_hash_t *newHtable  = sc_hash_make(newPool);
+    if ( !newHtable ) {
+        // alloc memory faild 
+        return ;
+    }
 	globalVariable->styleVersionTable = newHtable;
 
 	if(NULL != globalVariable->oldPool) {

@@ -93,6 +93,9 @@ typedef struct  {
 	time_t               prevTime;
 	time_t               upateTime;
 	sc_pool_t           *newPool, *oldPool;
+#ifdef SC_NGINX_PLATFORM
+    sc_pool_t           *server_pool;
+#endif
 	sc_hash_t           *styleVersionTable;
 	CombineConfig       *pConfig;
 	char                *modRunMode;

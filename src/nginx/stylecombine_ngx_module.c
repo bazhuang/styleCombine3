@@ -13,6 +13,8 @@ void *nginx_sc_module_init(sc_pool_t *pool, ngx_http_stylecombine_conf_t *conf)
         return NULL;
     combine_config_init(pool, *config);
     global_variable_init(pool, *config, &conf->sc_global_config);
+    conf->sc_global_config.server_pool = pool;
+
     conf->styleParserTags[0] = NULL;
     conf->styleParserTags[1] = NULL;
     if ( !style_tag_init(pool, conf->styleParserTags) )

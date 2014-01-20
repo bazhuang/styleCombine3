@@ -194,7 +194,7 @@ static int parserTag(ParamConfig *paramConfig, StyleParserTag *ptag, Buffer *max
 	}
 
 	char *currURI    = currURL + domain->used;
-	short hasDo      = 0,  stop = 0;
+	short hasDot      = 0,  stop = 0;
 	Buffer *styleUri = buffer_init_size(pool, (maxUrlBuf->used - domain->used));
 	if(NULL == styleUri) {
 		return count;
@@ -211,7 +211,7 @@ static int parserTag(ParamConfig *paramConfig, StyleParserTag *ptag, Buffer *max
 			stop = 1;
 			break;
 		case '.':
-			hasDo = 1;
+			hasDot = 1;
 			break;
 		}
 		if(stop) {
@@ -222,7 +222,7 @@ static int parserTag(ParamConfig *paramConfig, StyleParserTag *ptag, Buffer *max
 		}
 		styleUri->ptr[styleUri->used++] = ch;
 	}
-	if (!hasDo) { //没有带有.js/.css后缀的style文件将忽略处理
+	if (!hasDot) { //没有带有.js/.css后缀的style文件将忽略处理
 		return count;
 	}
 	styleUri->ptr[styleUri->used] = ZERO_END;
@@ -619,6 +619,10 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt, Buffer *combinedSty
 			sc_hash_t *groupsMap = domains[styleField->domainIndex];
 			if(NULL == groupsMap) {
 				domains[styleField->domainIndex] = groupsMap = sc_hash_make(req_pool);
+                if ( !groupsMap ) {
+                    // hash create failed !
+                    return 0;
+                }
 			} else {
 				styleList = sc_hash_get(groupsMap, styleField->group->ptr, styleField->group->used);
 			}

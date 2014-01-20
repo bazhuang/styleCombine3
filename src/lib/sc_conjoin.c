@@ -53,19 +53,15 @@ inline short sc_pool_create(sc_pool_t **newpool, sc_pool_t *parent)
     if ( NULL == newpool || NULL == parent)
         return ret;
 
-    /* Nginx create a new pool need not a parent pool */
-    *newpool = parent; 
+    *newpool = ngx_create_pool(1024, parent->log);
 
     return 0;
 }
 
 inline void sc_pool_destroy(sc_pool_t *pool)
 {
-    /* we can not destroy a pool in this module, because we use one global pool.
-     * sc_pool_create just return the global pool, and the global pool is managed by Nginx itself.
-     *
-     * every request has it owern pool independently.
-     */
+    if ( pool )
+        ngx_destroy_pool(pool);
     return;
 }
 
@@ -82,7 +78,7 @@ inline void *sc_pcalloc(sc_pool_t *pool, long size)
     if ( NULL == pool || size < 0)
         return NULL;
     
-    return ngx_pnalloc(pool,size);
+    return ngx_pcalloc(pool,size);
 }
 
 inline short sc_md5(unsigned char digest[SC_MD5_DIGESTSIZE], const void *input,
