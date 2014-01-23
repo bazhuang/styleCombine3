@@ -12,9 +12,15 @@
 #include "sc_common.h"
 #include "sc_buffer.h"
 
+/* order DOES matter!!! */
 enum DataProtocol {
-	ERROR_PROTOCAL, UPDATOR_CHECK, VERSION_GET
+        ERROR_PROTOCAL, 
+        STYLE_UPDATOR_CHECK, 
+        AMD_UPDATOR_CHECK, 
+        STYLE_VERSION_GET, 
+        AMD_VERSION_GET
 };
+
 
 typedef struct {
 	int       protocol;

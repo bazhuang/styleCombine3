@@ -407,21 +407,21 @@ static void data_handler(apr_pool_t *pool, Buffer *resultBuf, int socketFd) {
 	case ERROR_PROTOCAL:
 		write_data(socketFd, ERROR_PROTOCAL, NULL, 0);
 		break;
-	case UPDATOR_CHECK:
+	case STYLE_UPDATOR_CHECK:
 		apr_snprintf(modifyTimeCnt, 20, "%ld", gConfig->modifiedTime);
-		write_data(socketFd, UPDATOR_CHECK, modifyTimeCnt, strlen(modifyTimeCnt));
+		write_data(socketFd, STYLE_UPDATOR_CHECK, modifyTimeCnt, strlen(modifyTimeCnt));
 		break;
-	case VERSION_GET:
+	case STYLE_VERSION_GET:
 		if(NULL == styleVersionTable) {
-			write_data(socketFd, VERSION_GET, NULL, 0);
+			write_data(socketFd, STYLE_VERSION_GET, NULL, 0);
 			return;
 		}
 		Buffer *version = (Buffer *) apr_hash_get(styleVersionTable, data->ptr, data->used);
 		if(SC_IS_EMPTY_BUFFER(version)) {
-			write_data(socketFd, VERSION_GET, NULL, 0);
+			write_data(socketFd, STYLE_VERSION_GET, NULL, 0);
 			return;
 		}
-		write_data(socketFd, VERSION_GET, version->ptr, version->used);
+		write_data(socketFd, STYLE_VERSION_GET, version->ptr, version->used);
 		break;
 	default:
 		write_data(socketFd, ERROR_PROTOCAL, NULL, 0);

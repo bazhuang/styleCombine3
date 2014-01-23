@@ -35,7 +35,7 @@ void check_version_update(sc_pool_t *server_pool, sc_pool_t *req_pool, GlobalVar
 #endif
 
 	//socket updator_check
-	Buffer *data = get_data(req_pool, UPDATOR_CHECK, NULL, 0);
+	Buffer *data = get_data(req_pool, STYLE_UPDATOR_CHECK, NULL, 0);
 	if(SC_IS_EMPTY_BUFFER(data)) {
 		return;
 	}
@@ -88,15 +88,13 @@ static Buffer *get_if_null_and_put(Buffer *styleUri, GlobalVariable *globalVaria
 #ifndef SC_NGINX_PLATFORM
 	//写数据时锁住hash列表，避免多线程安全
 	sc_thread_mutex_lock(globalVariable->getDataLock);
-#endif
 	buf = (Buffer *) sc_hash_get(globalVariable->styleVersionTable, styleUri->ptr, styleUri->used);
 	if(NULL != buf) {
-#ifndef SC_NGINX_PLATFORM
 		sc_thread_mutex_unlock(globalVariable->getDataLock);
-#endif
 		return buf;
 	}
-	Buffer *data = get_data(globalVariable->newPool, VERSION_GET, styleUri->ptr, styleUri->used);
+#endif
+	Buffer *data = get_data(globalVariable->newPool, STYLE_VERSION_GET, styleUri->ptr, styleUri->used);
 	if(!SC_IS_EMPTY_BUFFER(data)) {
 		char *key = sc_pstrmemdup(globalVariable->newPool, styleUri->ptr, styleUri->used);
 		sc_hash_set(globalVariable->styleVersionTable, key, styleUri->used, data);
