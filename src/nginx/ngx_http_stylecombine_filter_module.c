@@ -317,6 +317,7 @@ ngx_http_stylecombine_header_filter(ngx_http_request_t *r)
     ngx_http_stylecombine_ctx_t   *ctx;                                        
     ngx_http_stylecombine_conf_t  *conf;                                       
     CombineConfig   *sc_conf;
+    ngx_http_core_loc_conf_t       *clcf;
                                                                        
     conf = ngx_http_get_module_loc_conf(r, ngx_http_stylecombine_filter_module);
                                                                        
@@ -326,11 +327,27 @@ ngx_http_stylecombine_header_filter(ngx_http_request_t *r)
             && r->headers_out.status != NGX_HTTP_NOT_FOUND)            
         || (r->headers_out.content_encoding                            
             && r->headers_out.content_encoding->value.len)             
-        || (r->headers_out.content_length_n == -1)
+        || r != r->main
+//        || (r->headers_out.content_length_n == -1)
+                 
         || r->header_only)                                             
     {                                                                  
         return ngx_http_next_header_filter(r);                         
     }                                                                  
+
+    /* for chunked model */
+    if (r->headers_out.content_length_n == -1) {
+        if (r->http_version < NGX_HTTP_VERSION_11) {
+            r->keepalive = 0;
+        } else {
+            clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
+            if (clcf->chunked_transfer_encoding) {
+                r->chunked = 1;
+            } else {
+                r->keepalive = 0;
+            }
+        }
+    }
 
     sc_conf = conf->sc_global_config.pConfig;
     if ( !sc_conf  ) {
@@ -358,7 +375,7 @@ ngx_http_stylecombine_header_filter(ngx_http_request_t *r)
     ctx->request = r;                                           
 
     ctx->isHTML = 0;
-    ctx->page_size = (size_t) r->headers_out.content_length_n;
+    ctx->page_size = r->headers_out.content_length_n;
 
     ngx_http_clear_content_length(r);
 
@@ -467,6 +484,19 @@ ngx_http_stylecombine_read(ngx_http_request_t *r, ngx_chain_t *in)
     ngx_http_stylecombine_ctx_t  *ctx;
 
     ctx = ngx_http_get_module_ctx(r, ngx_http_stylecombine_filter_module);
+    
+    if ( -1 == ctx->page_size ) {
+        if ( r->chunked ) {
+
+            /* chunked model */
+            ctx->page_size = 0;
+            for (cl = in; cl; cl = cl->next) {
+                ctx->page_size += ngx_buf_size(cl->buf);
+            }
+        }else {
+            return ngx_http_next_body_filter(r, in);
+        }
+    } 
 
     if (ctx->page == NULL) {
         ctx->page = ngx_palloc(r->pool, ctx->page_size);

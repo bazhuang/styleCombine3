@@ -42,7 +42,7 @@ typedef struct {
     u_char                      *page;
     u_char                      *last;
 
-    size_t                      page_size;
+    off_t                      page_size;
     ngx_uint_t                  phase;
     unsigned                    buffered;
 
