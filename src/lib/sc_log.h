@@ -9,6 +9,7 @@
 #define SC_LOG_H_
 
 #include <stdio.h>
+#include <stdarg.h>
 #include <sys/errno.h>
 #include <sys/syslog.h>
 
