@@ -317,7 +317,6 @@ ngx_http_stylecombine_header_filter(ngx_http_request_t *r)
     ngx_http_stylecombine_ctx_t   *ctx;                                        
     ngx_http_stylecombine_conf_t  *conf;                                       
     CombineConfig   *sc_conf;
-    ngx_http_core_loc_conf_t       *clcf;
                                                                        
     conf = ngx_http_get_module_loc_conf(r, ngx_http_stylecombine_filter_module);
                                                                        
@@ -335,28 +334,13 @@ ngx_http_stylecombine_header_filter(ngx_http_request_t *r)
         return ngx_http_next_header_filter(r);                         
     }                                                                  
 
-    /* for chunked model */
-    if (r->headers_out.content_length_n == -1) {
-        if (r->http_version < NGX_HTTP_VERSION_11) {
-            r->keepalive = 0;
-        } else {
-            clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
-            if (clcf->chunked_transfer_encoding) {
-                r->chunked = 1;
-            } else {
-                r->keepalive = 0;
-            }
-        }
-    }
-
     sc_conf = conf->sc_global_config.pConfig;
     if ( !sc_conf  ) {
         return ngx_http_next_header_filter(r);
     }
 
     /* content type */
-    if ( r->headers_out.content_type.len != conf->filter_cntx_type.len
-        || ngx_strncasecmp(r->headers_out.content_type.data, conf->filter_cntx_type.data, \
+    if ( ngx_strncasecmp(r->headers_out.content_type.data, conf->filter_cntx_type.data, \
            conf->filter_cntx_type.len) != 0 ) {
         return ngx_http_next_header_filter(r);
     }
@@ -486,15 +470,9 @@ ngx_http_stylecombine_read(ngx_http_request_t *r, ngx_chain_t *in)
     ctx = ngx_http_get_module_ctx(r, ngx_http_stylecombine_filter_module);
     
     if ( -1 == ctx->page_size ) {
-        if ( r->chunked ) {
-
-            /* chunked model */
-            ctx->page_size = 0;
-            for (cl = in; cl; cl = cl->next) {
-                ctx->page_size += ngx_buf_size(cl->buf);
-            }
-        }else {
-            return ngx_http_next_body_filter(r, in);
+        ctx->page_size = 0;
+        for (cl = in; cl; cl = cl->next) {
+            ctx->page_size += ngx_buf_size(cl->buf);
         }
     } 
 
