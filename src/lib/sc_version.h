@@ -3,6 +3,8 @@
  *
  *  Created on: Oct 19, 2013
  *      Author: zhiwenmizw
+ *      Author: dongming.jidm
+ *      Author: Bryton Lee
  */
 
 #ifndef SC_VERSION_H_
@@ -12,8 +14,10 @@
 #include "sc_config.h"
 
 void check_version_update(sc_pool_t *server_pool, sc_pool_t *req_pool, GlobalVariable *globalVariable);
+void checkAmdVersionUpdate(sc_pool_t *server_pool, sc_pool_t *req_pool, GlobalVariable *globalVariable);
 
 Buffer *get_string_version(sc_pool_t *pool, char *uri, Buffer *styleUri, GlobalVariable *globalVariable);
+Buffer *getAmdVersion(sc_pool_t *pool, char *uri, Buffer *styleUri, GlobalVariable *globalVariable);
 
 void make_md5_version(sc_pool_t *pool, Buffer *buf, Buffer *versionBuf);
 

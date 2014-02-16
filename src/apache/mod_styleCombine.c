@@ -1,6 +1,8 @@
 /**
- * zhiwen.mizw@alibaba-inc.com
+ * Author: zhiwen.mizw@alibaba-inc.com
  * 2013-04-20
+ * 
+ * Author: dongming.jidm
  *
  * compile
  * apxs -ic mod_styleCombine.c
@@ -235,6 +237,7 @@ static apr_status_t styleCombineOutputFilter(ap_filter_t *f, apr_bucket_brigade 
 	 */
 	if(NULL != globalVariable.modRunMode && 0 == memcmp(globalVariable.modRunMode, RUN_MODE_STATUS_WITH_LEN)) {
 		check_version_update(r->server->process->pool, r->pool, &globalVariable);
+        checkAmdVersionUpdate(r->server->process->pool, r->pool, &globalVariable);
 		return ap_pass_brigade(f->next, pbbIn);
 	}
 	/**
@@ -293,6 +296,7 @@ static apr_status_t styleCombineOutputFilter(ap_filter_t *f, apr_bucket_brigade 
 		//set debugMode value
 		ctx->debugMode = (short) debugMode;
         check_version_update(r->server->process->pool, r->pool, &globalVariable);
+        checkAmdVersionUpdate(r->server->process->pool, r->pool, &globalVariable);
 	}
 
 	//FIXME:保留trunked传输方式,（未实现）

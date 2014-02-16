@@ -366,6 +366,8 @@ ngx_http_stylecombine_header_filter(ngx_http_request_t *r)
     /* update (or initialize) stylecombine global variables */
     check_version_update(conf->sc_global_config.server_pool, r->pool, \
             &conf->sc_global_config);
+    checkAmdVersionUpdate(conf->sc_global_config.server_pool, r->pool, \
+            &conf->sc_global_config);
 
     r->main_filter_need_in_memory = 1;
     r->allow_ranges = 0;              
@@ -409,6 +411,7 @@ ngx_http_stylecombine_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
                   NGX_HTTP_SERVICE_UNAVAILABLE);
         }
 
+        ctx->phase = NGX_HTTP_STYLECOMBINE_PROCESS;
         /* fall through */
     case NGX_HTTP_STYLECOMBINE_PROCESS:
 

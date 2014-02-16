@@ -3,6 +3,8 @@
  *
  *  Created on: Oct 24, 2013
  *      Author: zhiwenmizw
+ *      Author: dongming.jidm 
+ *      Author: Bryton Lee
  */
 
 #include "sc_string.h"
@@ -44,6 +46,30 @@ void string_split(sc_pool_t *pool, Buffer *arrays[], int arrayLen, char *string,
 		string_append(pool, buf, item, len);
 		arrays[i++] = buf;
 	}
+}
+
+// dongming.jidm
+int count_n(char * str,const char * delim){
+    int num = 0;
+    while( NULL != ( str = strstr(str,delim) ) ){
+        str ++;
+        num ++;
+    }
+    return num;
+}
+
+// dongming.jidm
+int split_n(char **result, char * str, const char * del){
+    int num = count_n(str,del) + 1;
+    char * s = strtok(str,del);
+
+    while( s != NULL){
+        *result++ = s;
+        s = strtok(NULL,del);
+
+    }
+
+    return num;
 }
 
 short parseargline(char *str, char **pattern) {

@@ -3,6 +3,8 @@
  *
  *  Created on: Oct 19, 2013
  *      Author: zhiwenmizw
+ *      Author: dongming.jidm
+ *      Author: Bryton Lee
  */
 
 #include "sc_combine.h"
@@ -156,6 +158,9 @@ void combineStylesAsync(ParamConfig *paramConfig, StyleList *styleList, Buffer *
 
 		for(count = 0; NULL != node; count++) {
 			styleField = (StyleField *) node->value;
+            if (styleField->amd) {
+                styleField->styleUri = styleField->amdVersion;
+            }
 			if(count) {
 				string_append(pool, tmpUriBuf, URI_SEPARATOR_WITH_LEN);
 			}

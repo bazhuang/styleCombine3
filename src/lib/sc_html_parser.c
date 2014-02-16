@@ -3,6 +3,8 @@
  *
  *  Created on: Oct 19, 2013
  *      Author: zhiwenmizw
+ *      Author: dongming.jidm
+ *      Author: Bryton Lee
  */
 
 #include "sc_log.h"
@@ -69,8 +71,10 @@ static StyleField *style_field_create(sc_pool_t  *pool) {
 		return NULL;
 	}
 	styleField->async       = 0;
+    styleField->amd         = 0;
 	styleField->styleUri    = NULL;
 	styleField->version     = NULL;
+    styleField->amdVersion  = NULL;
 	styleField->position    = SC_NONE;
 	styleField->styleType   = SC_TYPE_CSS;
 	styleField->domainIndex = 0;
@@ -287,7 +291,7 @@ static int parserTag(ParamConfig *paramConfig, StyleParserTag *ptag, Buffer *max
 				continue;
 			}
 			break;
-		case 'a': //data-sc-async
+		case 'a': //data-sc-async or data-sc-amd
 			if(0 == compare(tagBufPtr, "async", 5, 0)) {
 				tagBufPtr   += 5;
 				retValue     = 0;
@@ -302,6 +306,20 @@ static int parserTag(ParamConfig *paramConfig, StyleParserTag *ptag, Buffer *max
 					continue;
 				}
 			}
+            if(0 == compare(tagBufPtr, "amd", 3, 0)) {
+                tagBufPtr   += 3;
+                retValue     = 0, 
+                hasSymble    = 0;
+                FIELD_PARSE(tagBufPtr, retValue, hasSymble);
+                if(retValue == -1) {
+                    continue;
+                }
+                if(0 == memcmp(tagBufPtr, "true", 4)) {
+                    styleField->amd = 1;
+                    tagBufPtr += 4 + hasSymble;
+                    continue;
+                }
+            }
 			break;
 		case 'g': //data-sc-group
 			if(0 == compare(tagBufPtr, "group", 5, 0)) {
@@ -400,7 +418,61 @@ static short isRepeat(sc_pool_t *pool, sc_hash_t *duplicats, StyleField *styleFi
 	return 0;
 }
 
-int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt, Buffer *combinedStyleBuf[3], LinkedList *blockList, char *unparsed_uri) {
+/**
+ * 解析出amd模块依赖，将每个依赖作为单独的script插入到js列表中
+ * dongming.jidm
+ */
+static void parseDependecies(sc_pool_t *pool, GlobalVariable *globalVariable,
+                StyleField *styleField, LinkedList *listItem, char *url, sc_hash_t *duplicates)
+{
+
+    char *amdVersion = sc_pstrdup(pool, styleField->amdVersion->ptr);
+    char **result = NULL;
+    char *sepreator = ",";
+    int i = 0;
+    int num = count_n(amdVersion, sepreator);
+
+    //result = ( char ** ) malloc( sizeof(char*) * ( num +1));
+    result  = (char **) sc_palloc(pool, sizeof(char*) * ( num +1));
+
+    int count = split_n(result, amdVersion, sepreator);
+
+    for ( i = 0; i < count; i++) {
+        StyleField *styleFieldAmd = style_field_create(pool);
+        Buffer *dependBuf = buffer_init_size(pool, 1024);
+
+        char *restr = sc_pstrdup(pool, result[i]);
+        dependBuf->ptr = restr;
+        dependBuf->used = strlen(restr);
+
+//        dependBuf->ptr = result[i];
+//        dependBuf->used = strlen(result[i]);
+
+        styleFieldAmd->async = styleField->async;
+        styleFieldAmd->styleType = styleField->styleType;
+        styleFieldAmd->domainIndex = styleField->domainIndex;
+        styleFieldAmd->styleUri = dependBuf;
+        styleFieldAmd->group = styleField->group;
+        styleFieldAmd->media = styleField->media;
+        styleFieldAmd->version = get_string_version(pool, url, dependBuf, globalVariable);
+        styleFieldAmd->position = styleField->position;
+
+        //去重，但不包括最后一个入口文件
+        if(!styleField->async && isRepeat(pool, duplicates, styleFieldAmd) && i != (count - 1)) {
+            continue;
+        }
+
+//        log_error("url is %s", styleFieldAmd->styleUri->ptr);
+
+        add(pool, listItem, styleFieldAmd);
+    }
+
+    //free(result);
+}
+
+int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt,
+        Buffer *combinedStyleBuf[3], LinkedList *blockList, char *unparsed_uri)
+{
 
 	if (SC_IS_EMPTY_BUFFER(sourceCnt) || NULL == combinedStyleBuf || NULL == blockList) {
 		return 0;
@@ -410,6 +482,13 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt, Buffer *combinedSty
 	char *input           = sourceCnt->ptr;
 	//创建一个列表，用于存放所有的索引对象，包括一些未分组和未指定位置的style
 	ContentBlock *block   = NULL;
+
+    //dongming.jidm
+    Buffer *appState = get_string_version(req_pool, unparsed_uri,
+                            pConfig->appName, paramConfig->globalVariable);
+    if (strcmp(appState->ptr, "off") == 0) {
+        return 0;
+    }
 
 	//用于去重的 hash
 	sc_hash_t *duplicates= sc_hash_make(req_pool);
@@ -567,10 +646,20 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt, Buffer *combinedSty
 			bIndex        = eIndex;
 
 			if(LOG_STYLE_FIELD == paramConfig->pConfig->printLog) {
-				sc_log_debug(LOG_STYLE_FIELD, "styleField uri[%s]used[%d]len[%d]size[%d] type[%d] group[%s] media[%s] pos[%d] async[%d]",
-								styleField->styleUri->ptr, styleField->styleUri->used, strlen(styleField->styleUri->ptr), styleField->styleUri->size,
-								styleField->styleType, styleField->group->ptr,
-								((styleField->media)==NULL ? "" : styleField->media->ptr), styleField->position, styleField->async);
+				sc_log_debug(LOG_STYLE_FIELD, "styleField "
+                    "uri[%s]used[%d]len[%d]size[%d] type[%d]"
+                    " group[%s] media[%s] pos[%d] async[%d] amd[%d]",
+								styleField->styleUri->ptr, 
+                                styleField->styleUri->used, 
+                                strlen(styleField->styleUri->ptr), 
+                                styleField->styleUri->size,
+								styleField->styleType, 
+                                styleField->group->ptr,
+								((styleField->media)==NULL ? "" : styleField->media->ptr), 
+                                styleField->position, 
+                                styleField->async,
+                                styleField->amd
+                );
 			}
 
 			NEXT_CHARS_WITH_RESET(istr, bIndex, eIndex, retLen);
@@ -593,7 +682,10 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt, Buffer *combinedSty
 			}
 
 			styleField->version = get_string_version(req_pool, unparsed_uri, styleField->styleUri, paramConfig->globalVariable);
-
+            if (styleField->amd) {
+                styleField->amdVersion = getAmdVersion(req_pool, unparsed_uri, 
+                        styleField->styleUri, paramConfig->globalVariable);
+            }
 			//当没有使用异步并且又没有设置位置则保持原位不动
 			if(0 == styleField->async && SC_NONE == styleField->position) {
 				block               = contentBlock_create_init(req_pool, -1, 0, tnameEnum);
@@ -645,7 +737,15 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt, Buffer *combinedSty
 					continue;
 				}
 
-				add(req_pool, itemList, styleField);
+                if (styleField->amd  && paramConfig->globalVariable->isAmdVersionGood &&
+                         strcmp(styleField->amdVersion->ptr, "false") != 0) {
+                    //dongming.jidm
+                    parseDependecies(req_pool, paramConfig->globalVariable, styleField, 
+                                itemList, unparsed_uri, duplicates);
+                }else{
+                    add(req_pool, itemList, styleField);
+                }
+
 				styleList->domainIndex = styleField->domainIndex;
 				styleList->group = styleField->group;
 				styleList->list[(int) styleField->styleType] = itemList;
@@ -654,7 +754,14 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt, Buffer *combinedSty
 				 */
 				sc_hash_set(groupsMap, styleField->group->ptr, styleField->group->used, styleList);
 			} else {
-				add(req_pool, styleList->list[(int) styleField->styleType], styleField);
+                if (styleField->amd  && paramConfig->globalVariable->isAmdVersionGood && 
+                        strcmp(styleField->amdVersion->ptr, "false") != 0) {
+                    //dongming.jidm
+                    parseDependecies(req_pool, paramConfig->globalVariable, styleField, 
+                        styleList->list[(int) styleField->styleType], unparsed_uri, duplicates);
+                }else{
+                    add(req_pool, styleList->list[(int) styleField->styleType], styleField);
+                }
 			}
 			//去掉style后面的回车 制表 空格等符号
 			while(isspace(*istr)) {
@@ -727,7 +834,7 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt, Buffer *combinedSty
 	}
 
 	//追加尾部的内容
-	block         = contentBlock_create_init(req_pool, bIndex, ++eIndex, SC_TN_NONE);
+	block = contentBlock_create_init(req_pool, bIndex, ++eIndex, SC_TN_NONE);
 	add(req_pool, blockList, (void *) block);
 
 	ListNode      *node = NULL;

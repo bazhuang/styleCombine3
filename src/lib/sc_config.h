@@ -3,6 +3,8 @@
  *
  *  Created on: Oct 19, 2013
  *      Author: zhiwenmizw
+ *      Author: dongming.jidm
+ *      Author: Bryton Lee
  */
 
 #ifndef SC_CONFIG_H_
@@ -62,12 +64,14 @@ typedef struct {
 
 typedef struct StyleField {
 	short                 async;
+    int                   amd;
 	enum StyleType        styleType;
 	short                 domainIndex;
 	Buffer               *styleUri;
 	Buffer               *group;
 	Buffer               *media;
 	Buffer               *version;
+    Buffer               *amdVersion;
 	enum PositionEnum     position;
 } StyleField;
 
@@ -89,14 +93,17 @@ typedef struct {
 typedef struct  {
 #ifndef SC_NGINX_PLATFORM
 	sc_thread_mutex_t   *getDataLock, *intervalCheckLock;
+	sc_thread_mutex_t   *getDataLock_amd, *intervalCheckLock_amd;
 #endif
-	time_t               prevTime;
-	time_t               upateTime;
-	sc_pool_t           *newPool, *oldPool;
+	time_t               prevTime, amdPrevTime;
+	time_t               upateTime, amdUpdateTime;
+	sc_pool_t           *newPool, *oldPool, *newAmdPool, *oldAmdPool;
 #ifdef SC_NGINX_PLATFORM
     sc_pool_t           *server_pool;
 #endif
 	sc_hash_t           *styleVersionTable;
+	sc_hash_t           *amdVersionTable;
+    int                 isAmdVersionGood;
 	CombineConfig       *pConfig;
 	char                *modRunMode;
 } GlobalVariable;

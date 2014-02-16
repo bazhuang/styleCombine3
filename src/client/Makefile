@@ -19,6 +19,7 @@ endif
 
 CC=$(shell $(APR) --cc)
 CFLAGS=$(shell $(APR) --cflags --cppflags --link-ld)
+CFLAGS+=-DSC_HTTPD_PLATFORM
 LIB=../lib
 INCLUDES=$(shell $(APR) --includes) -I. -I${LIB}
 
@@ -26,16 +27,16 @@ StyleVersionUpdator: sc_conjoin.o sc_string.o sc_buffer.o sc_socket.o
 	${CC} -Wall StyleVersionUpdator.c -o $@ -g $(CFLAGS) $^ ${INCLUDES} 
 
 StyleVersionUpdator.o: StyleVersionUpdator.c
-	${CC} -c $< ${INCLUDES}
+	${CC} -c $< ${INCLUDES} $(CFLAGS)
 
 sc_buffer.o: ${LIB}/sc_buffer.c
-	${CC} -c $< ${INCLUDES}
+	${CC} -c $< ${INCLUDES} $(CFLAGS)
 sc_string.o: ${LIB}/sc_string.c
-	${CC} -c $< ${INCLUDES}
+	${CC} -c $< ${INCLUDES} $(CFLAGS)
 sc_socket.o: ${LIB}/sc_socket.c
-	${CC} -c $< ${INCLUDES}
-sc_conjoin.o: sc_conjoin.c
-	${CC} -c $< ${INCLUDES}
+	${CC} -c $< ${INCLUDES} $(CFLAGS)
+sc_conjoin.o:${LIB}/sc_conjoin.c
+	${CC} -c $< ${INCLUDES} $(CFLAGS)
 
 clean:
 	rm -f StyleVersionUpdator

@@ -3,6 +3,8 @@
  *
  *  Created on: Oct 19, 2013
  *      Author: zhiwenmizw
+ *      Author: dongming.jidm
+ *      Author: Bryton Lee
  */
 
 #include <time.h>
@@ -73,6 +75,58 @@ void check_version_update(sc_pool_t *server_pool, sc_pool_t *req_pool, GlobalVar
 	return;
 }
 
+void checkAmdVersionUpdate(sc_pool_t *server_pool, sc_pool_t *req_pool, GlobalVariable *globalVariable) {
+    time_t currentSec;
+    time(&currentSec);
+    //每隔20秒 将重新去执行加载版本信息，为了减少过多的版本信息检查带来性能开销
+    if(0 != globalVariable->amdPrevTime && (currentSec - globalVariable->amdPrevTime) <= 20) {
+        return;
+    }    
+    
+#ifndef SC_NGINX_PLATFORM
+    sc_thread_mutex_lock(globalVariable->intervalCheckLock_amd);
+    if(0 != globalVariable->amdPrevTime && (currentSec - globalVariable->amdPrevTime) <= 20) {
+        sc_thread_mutex_unlock(globalVariable->intervalCheckLock_amd);
+        return;
+    }    
+#endif
+    globalVariable->amdPrevTime = currentSec;
+#ifndef SC_NGINX_PLATFORM
+    sc_thread_mutex_unlock(globalVariable->intervalCheckLock_amd);
+#endif
+    
+    //socket updator_check
+    Buffer *data = get_data(req_pool, AMD_UPDATOR_CHECK, NULL, 0);
+    if(SC_IS_EMPTY_BUFFER(data)) {
+        return;
+    }    
+    long newVsTime = atol(data->ptr);
+//  log_debug(0, "amd version time equals local=[%ld] vs [%ld]", globalVariable->amdUpdateTime, newVsTime);
+    
+    if(globalVariable->amdUpdateTime == newVsTime) {
+        return;
+    }
+    /**
+     * 创建一个新的内存池来创建一个hashtable，用于存放所有的k,v。
+     * 并且将老的内存池和hashtable释放掉。
+     */
+    sc_pool_t *newPool = NULL;
+    sc_pool_create(&newPool, server_pool);
+    if(NULL == newPool) {
+        return;
+    }
+    globalVariable->newAmdPool = newPool;
+    sc_hash_t *newHtable  = sc_hash_make(newPool);
+    globalVariable->amdVersionTable = newHtable;
+
+    if(NULL != globalVariable->oldAmdPool) {
+        sc_pool_destroy(globalVariable->oldAmdPool);
+    }
+    globalVariable->oldAmdPool    = newPool;
+    globalVariable->amdUpdateTime  = newVsTime;
+    return;
+}
+
 static Buffer *get_if_null_and_put(Buffer *styleUri, GlobalVariable *globalVariable) {
 
 	if(NULL == globalVariable->styleVersionTable) {
@@ -100,7 +154,8 @@ static Buffer *get_if_null_and_put(Buffer *styleUri, GlobalVariable *globalVaria
 		sc_hash_set(globalVariable->styleVersionTable, key, styleUri->used, data);
 	}
 	if(globalVariable->pConfig->printLog == LOG_GET_VERSION) {
-		sc_log_debug(LOG_GET_VERSION, "pid=%d get version URL [%s][%ld] vs[%s]", getpid(), styleUri->ptr, styleUri->used, ((NULL == data) ? "" : data->ptr));
+		sc_log_debug(LOG_GET_VERSION, "pid=%d get version URL [%s][%ld] vs[%s]",
+            getpid(), styleUri->ptr, styleUri->used, ((NULL == data) ? "" : data->ptr));
 	}
 #ifndef SC_NGINX_PLATFORM
 	sc_thread_mutex_unlock(globalVariable->getDataLock);
@@ -111,7 +166,8 @@ static Buffer *get_if_null_and_put(Buffer *styleUri, GlobalVariable *globalVaria
 Buffer *get_string_version(sc_pool_t *pool, char *uri, Buffer *styleUri, GlobalVariable *globalVariable) {
 	Buffer *versionBuf = get_if_null_and_put(styleUri, globalVariable);
 	if(SC_IS_EMPTY_BUFFER(versionBuf) || 1 == versionBuf->used) {
-		sc_log_error("pid=%d styleCombine=can't getVersion:ReqURI:[%s]==>StyleURI:[%s]", getpid(), uri, styleUri->ptr);
+		sc_log_error("pid=%d styleCombine=can't get style version:ReqURI:[%s]==>StyleURI:[%s]",
+            getpid(), uri, styleUri->ptr);
 		time_t currentSec;
 		time(&currentSec);
 		versionBuf     = buffer_init_size(pool, 64);
@@ -120,6 +176,58 @@ Buffer *get_string_version(sc_pool_t *pool, char *uri, Buffer *styleUri, GlobalV
 		versionBuf->used = strlen(versionBuf->ptr);
 	}
 	return versionBuf;
+}
+
+static Buffer *getAndPut_AMD_version(Buffer *styleUri, GlobalVariable *globalVariable)
+{
+    if(NULL == globalVariable->amdVersionTable) {
+        globalVariable->isAmdVersionGood = 0;
+        sc_log_error("amdVersionTable is NULL or not Ready!");
+        return NULL;
+    }
+    globalVariable->isAmdVersionGood = 1;
+    //先在当前的hash表里查询，查到了直接返回 。 没有查到再从网络获取，获取到后写入hash表中
+    Buffer *buf = (Buffer *) sc_hash_get(globalVariable->amdVersionTable, styleUri->ptr, styleUri->used);
+    if(NULL != buf) {
+        return buf;
+    }
+
+#ifndef SC_NGINX_PLATFORM
+    //写数据时锁住hash列表，避免多线程安全
+    sc_thread_mutex_lock(globalVariable->getDataLock_amd);
+    buf = (Buffer *) sc_hash_get(globalVariable->amdVersionTable, styleUri->ptr, styleUri->used);
+    if(NULL != buf) {
+        sc_thread_mutex_unlock(globalVariable->getDataLock_amd);
+        return buf;
+    }
+#endif
+    Buffer *data =get_data(globalVariable->newAmdPool, AMD_VERSION_GET, styleUri->ptr, styleUri->used);
+    if(!SC_IS_EMPTY_BUFFER(data)) {
+        char *key = sc_pstrmemdup(globalVariable->newAmdPool, styleUri->ptr, styleUri->used);
+        sc_hash_set(globalVariable->amdVersionTable, key, styleUri->used, data);
+    }
+    if( globalVariable->pConfig->printLog == LOG_GET_VERSION ) {
+        sc_log_debug(LOG_GET_VERSION, "pid=%d get amd version URL [%s][%ld] vs[%s]", 
+            getpid(), styleUri->ptr, styleUri->used, ((NULL == data) ? "" : data->ptr));
+    }
+#ifndef SC_NGINX_PLATFORM
+    sc_thread_mutex_unlock(globalVariable->getDataLock_amd);
+#endif
+    return data;
+}
+
+Buffer *getAmdVersion(sc_pool_t *pool, char *uri, Buffer *styleUri, GlobalVariable *globalVariable)
+{
+    Buffer *versionBuf = getAndPut_AMD_version(styleUri, globalVariable);
+    if(SC_IS_EMPTY_BUFFER(versionBuf) || 1 == versionBuf->used) {
+        sc_log_error("pid=%d styleCombine=can't get amd Version:ReqURI:[%s]==>StyleURI:[%s]",
+            getpid(), uri, styleUri->ptr);
+        versionBuf = buffer_init_size(pool, 64);
+
+        snprintf(versionBuf->ptr, versionBuf->size, "%s", "false");
+        versionBuf->used = strlen(versionBuf->ptr);
+    }
+    return versionBuf;
 }
 
 void make_md5_version(sc_pool_t *pool, Buffer *buf, Buffer *versionBuf) {

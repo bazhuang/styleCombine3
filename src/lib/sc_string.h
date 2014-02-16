@@ -3,6 +3,8 @@
  *
  *  Created on: Oct 19, 2013
  *      Author: zhiwenmizw
+ *      Author: dongming.jidm
+ *      Author: Bryton Lee
  */
 
 #ifndef SC_STRING_H_
@@ -25,6 +27,8 @@ int compare(char *input, char *pattern, int patternLen, short ignorecase);
 void string_split(sc_pool_t *pool, Buffer *arrays[], int arrayLen, char *string,
 		char *seperator);
 
+int count_n(char * str,const char * delim);
+int split_n(char **result, char * str, const char * del);
 short parseargline(char *str, char **pattern);
 
 char *sc_pstrmemdup(sc_pool_t *pool, const char *s, size_t n);

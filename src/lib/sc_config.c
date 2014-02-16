@@ -3,14 +3,19 @@
  *
  *  Created on: Oct 20, 2013
  *      Author: zhiwenmizw
+ *      Author: dongming.jidm
+ *      Author: Bryton Lee
  */
 
 #include "sc_config.h"
 
 void global_variable_init(sc_pool_t *pool, CombineConfig *pConfig,  GlobalVariable *globalVariable) {
 	globalVariable->styleVersionTable = NULL;
+    globalVariable->amdVersionTable = NULL;
 	globalVariable->newPool           = NULL;
 	globalVariable->oldPool           = NULL;
+    globalVariable->newAmdPool        = NULL;
+    globalVariable->oldAmdPool        = NULL;
 	globalVariable->prevTime          = 0;
 	globalVariable->upateTime         = 0;
 	globalVariable->modRunMode        = NULL;
@@ -18,6 +23,8 @@ void global_variable_init(sc_pool_t *pool, CombineConfig *pConfig,  GlobalVariab
 #ifndef SC_NGINX_PLATFORM
 	sc_thread_mutex_create(&globalVariable->getDataLock, SC_THREAD_MUTEX_DEFAULT, pool);
 	sc_thread_mutex_create(&globalVariable->intervalCheckLock, SC_THREAD_MUTEX_DEFAULT, pool);
+    sc_thread_mutex_create(&globalVariable->getDataLock_amd, SC_THREAD_MUTEX_DEFAULT, pool);
+    sc_thread_mutex_create(&globalVariable->intervalCheckLock_amd, SC_THREAD_MUTEX_DEFAULT, pool);
 #endif
 #ifdef SC_NGINX_PLATFORM
     globalVariable->server_pool = NULL;
