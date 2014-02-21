@@ -305,14 +305,14 @@ static int parseLockUrl(apr_pool_t *pool, char *lockURL, style_updator_config *c
     return 1;
 }
 
-static void argsParser(apr_pool_t *pool, int count, char *args[])
+static int argsParser(apr_pool_t *pool, int count, char *args[])
 {
-    int i;
+    int ret = -1, i;
     apr_finfo_t  finfo;
 
     if(count < 3) {
         sc_log_error("USAGE:%s\n", USAGE);
-        exit(1);
+        return ret;
     }
 
     gConfig = (style_updator_config *) apr_palloc(pool, sizeof(style_updator_config));
@@ -333,7 +333,7 @@ static void argsParser(apr_pool_t *pool, int count, char *args[])
 
     if(!parseLockUrl(pool, lockUrl, gConfig)){
         sc_log_error("lock url is wrong\n");
-        exit(1);
+        return ret;
     };
 
     //文件目录
@@ -344,8 +344,10 @@ static void argsParser(apr_pool_t *pool, int count, char *args[])
     buffer_debug(gConfig->configFileDir, "configFileDir");
 
     if(APR_SUCCESS != apr_stat(&finfo, configFileDir->ptr, APR_FINFO_MIN, pool)) {
-        mkdir_recursive(configFileDir->ptr);
-        return;
+        if ( mkdir_recursive(configFileDir->ptr) == -1 )  {
+            sc_log_error("Can not create director: %s\n", configFileDir->ptr);
+            return ret;
+        }
     }
 
     if ( count > 3 ) {
@@ -397,6 +399,8 @@ static void argsParser(apr_pool_t *pool, int count, char *args[])
     SC_STRING_APPEND_BUFFER(pool, gConfig->tempFilePath, gConfig->gzipFilePath);
     string_append(pool, gConfig->tempFilePath, "_temp", 5);
     buffer_debug(gConfig->tempFilePath, "tempFilePath");
+    
+    return 0;
 }
 
 /**
@@ -938,7 +942,9 @@ int main(int argc, char *argv[])
     apr_pool_initialize();
     apr_pool_create(&gPool, NULL);
 
-    argsParser(gPool, argc, argv);
+    if (ret == argsParser(gPool, argc, argv))
+        return ret;
+
     init(gPool, gConfig);
 
     if (gConfig->runasdaemon != 1) {
