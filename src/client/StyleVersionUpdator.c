@@ -27,6 +27,7 @@
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <sys/un.h>
+#include <signal.h>
 
 #include <errno.h>
 #include <sys/socket.h>
@@ -52,19 +53,21 @@
 #define GZIP_CMD                            "tar -zxf "
 #define USAGE                               STYLE_COMBINE_VS" PARA DESC SEE:\n \
     \n ($1=http://xxxx/styleVersion.gz)  styleVersion url is required \
-\n ($2=/home/admin/output)           styleVersion file director is required \
-\n ($3=180)                          intervalSeconds default 180sec \
-\n ($4=0/1)                          is AMD open\
-\n ($5=0/1)                          debug Enable for dev enviroment \n"
+    \n ($2=/home/admin/output)           styleVersion file director is required \
+    \n ($3=180)                          intervalSeconds default 180sec \
+    \n ($4=0/1)                          is AMD open\
+    \n ($5=0/1)                          daemon mode [Off|On] \
+    \n ($6=0/1)                          debug Enable for dev enviroment.\n"
 
+/* global varibales */
 static int WGET_CMD_LEN                     = 0;
 static int MODIFIED_SINCE_HEADER_LEN        = 0;
 static int GZIP_CMD_LEN                     = 0;
 static char *wday[]                         = {"Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
+static int serverSocketFd = -1;
 
 typedef struct  {
     //from input
-    short    debug;
     int      openAmd;
     int      intervalSecond;
     int      port;
@@ -82,6 +85,9 @@ typedef struct  {
 
     time_t   styleModifiedTime;
     time_t   amdModifiedTime;
+    
+    int      runasdaemon;
+    short    debug;
 } style_updator_config;
 
 static style_updator_config   *gConfig     = NULL;
@@ -299,33 +305,27 @@ static int parseLockUrl(apr_pool_t *pool, char *lockURL, style_updator_config *c
     return 1;
 }
 
-static void argsParser(apr_pool_t *pool, int count, char *args[]) {
-    if(count < 2) {
+static void argsParser(apr_pool_t *pool, int count, char *args[])
+{
+    int i;
+    apr_finfo_t  finfo;
+
+    if(count < 3) {
         sc_log_error("USAGE:%s\n", USAGE);
         exit(1);
     }
 
-    int i = 0;
-
     gConfig = (style_updator_config *) apr_palloc(pool, sizeof(style_updator_config));
-    gConfig->intervalSecond     = 120;
-    gConfig->openAmd            = 1;
-    if(count > 3) {
-        gConfig->intervalSecond = atoi(args[3]);
-    }
-    if(count > 4) {
-        gConfig->openAmd = atoi(args[4]);
-    }
-    if(count > 5) {
-        gConfig->debug          = atoi(args[5]);
-    }
-    for(i = 0; i < count; i++) {
-        sc_log_debug(LOG_DEBUG, "param %d == %s\n", i, args[i]);
-    }
+    gConfig->intervalSecond = 120;
+    gConfig->openAmd = 1;
+    gConfig->runasdaemon = 0;
+    gConfig->styleModifiedTime = 0;
+    gConfig->amdModifiedTime = 0;
+    
     //下载版本文件的URL
     Buffer *versionURLBuf = buffer_init_size(pool, 100);
     put_value_to_buffer(versionURLBuf,  args[1]);
-    gConfig->versionURL   = versionURLBuf;
+    gConfig->versionURL = versionURLBuf;
 
     // 锁接口的URL
     // dongming.jidm add
@@ -337,50 +337,63 @@ static void argsParser(apr_pool_t *pool, int count, char *args[]) {
     };
 
     //文件目录
-    Buffer *configFileDir       = buffer_init_size(pool, 100);
+    Buffer *configFileDir = buffer_init_size(pool, 100);
     put_value_to_buffer(configFileDir, args[2]);
     SC_PATH_SLASH(configFileDir);
-    gConfig->configFileDir      = configFileDir;
+    gConfig->configFileDir = configFileDir;
     buffer_debug(gConfig->configFileDir, "configFileDir");
 
-    gConfig->styleModifiedTime  = 0;
-    gConfig->amdModifiedTime    = 0;
-
-    apr_finfo_t  finfo;
     if(APR_SUCCESS != apr_stat(&finfo, configFileDir->ptr, APR_FINFO_MIN, pool)) {
         mkdir_recursive(configFileDir->ptr);
         return;
     }
 
+    if ( count > 3 ) {
+        gConfig->intervalSecond = atoi(args[3]);
+    }
+    if ( count > 4 ) {
+        gConfig->openAmd = atoi(args[4]);
+    }
+    if ( count > 5 ) {
+        gConfig->runasdaemon = atoi(args[5]);
+    }
+    if ( count > 6 ) {
+        gConfig->debug = atoi(args[6]);
+    }
+
+    for(i = 0; i < count; i++) {
+        sc_log_debug(LOG_DEBUG, "param %d == %s\n", i, args[i]);
+    }
+
     //下载的文件路径
-    gConfig->gzipFilePath     = buffer_init_size(pool, configFileDir->used + 17);
+    gConfig->gzipFilePath = buffer_init_size(pool, configFileDir->used + 17);
     SC_STRING_APPEND_BUFFER(pool, gConfig->gzipFilePath, configFileDir);
     string_append(pool, gConfig->gzipFilePath, "styleVersion.tar.gz", 19);
     buffer_debug(gConfig->gzipFilePath, "gzipFilePath");
 
     //减压后的文件路径
     // style version file path
-    gConfig->expStyleFilePath      = buffer_init_size(pool, configFileDir->used + 14);
+    gConfig->expStyleFilePath = buffer_init_size(pool, configFileDir->used + 14);
     SC_STRING_APPEND_BUFFER(pool, gConfig->expStyleFilePath, configFileDir);
     string_append(pool, gConfig->expStyleFilePath, "styleVersion", 12);
     buffer_debug(gConfig->expStyleFilePath, "expStyleFilePath");
 
     // amd version file path
     if (gConfig->openAmd) {
-        gConfig->expAmdFilePath      = buffer_init_size(pool, configFileDir->used + 12);
+        gConfig->expAmdFilePath = buffer_init_size(pool, configFileDir->used + 12);
         SC_STRING_APPEND_BUFFER(pool, gConfig->expAmdFilePath, configFileDir);
         string_append(pool, gConfig->expAmdFilePath, "amdVersion", 10);
         buffer_debug(gConfig->expAmdFilePath, "expAmdFilePath");
     }
 
     //请求响应的日志路径
-    gConfig->reponseFilePath  = buffer_init_size(pool, configFileDir->used + 14);
+    gConfig->reponseFilePath = buffer_init_size(pool, configFileDir->used + 14);
     SC_STRING_APPEND_BUFFER(pool, gConfig->reponseFilePath, configFileDir);
     string_append(pool, gConfig->reponseFilePath, "response.log", 12);
     buffer_debug(gConfig->reponseFilePath, "reponseFilePath");
 
     //style下载时用于临时保存的文件名
-    gConfig->tempFilePath     = buffer_init_size(pool, gConfig->gzipFilePath->used + 6);
+    gConfig->tempFilePath = buffer_init_size(pool, gConfig->gzipFilePath->used + 6);
     SC_STRING_APPEND_BUFFER(pool, gConfig->tempFilePath, gConfig->gzipFilePath);
     string_append(pool, gConfig->tempFilePath, "_temp", 5);
     buffer_debug(gConfig->tempFilePath, "tempFilePath");
@@ -638,7 +651,6 @@ static void data_handler(/*apr_pool_t *pool,*/ Buffer *resultBuf, int socketFd) 
 }
 
 static int create_socket_server(apr_pool_t *pool){
-    int serverSocketFd      = 0;
     struct sockaddr_un      serverAddress;
     mode_t                  omask;
     int rc                  = -1;
@@ -851,48 +863,134 @@ static void init(apr_pool_t *pool, style_updator_config *config) {
     gWgetParams = getWgetParams(pool, config);
 }
 
-int main(int argc, char *argv[]) {
+static int style_client_daemon()
+{
+    int  fd;
+
+    switch (fork()) {
+    case -1:
+        sc_log_error("fork() failed");
+        return -1;
+   
+    case 0:
+        break;
+       
+    default:
+        exit(0);
+    }
+
+    if (setsid() == -1) {
+        sc_log_error("setsid() failed");
+        return -1;
+    }
+
+    umask(0);
+
+    fd = open("/dev/null", O_RDWR);
+    if (fd == -1) {
+        sc_log_error("open(\"/dev/null\") failed");
+        return -1;
+    }
+
+    if (dup2(fd, STDIN_FILENO) == -1) {
+         sc_log_error("dup2(STDIN) failed");
+         return -1;
+     }
+ 
+     if (dup2(fd, STDOUT_FILENO) == -1) {
+         sc_log_error("dup2(STDOUT) failed");
+         return -1;
+     }
+ 
+     if (dup2(fd, STDERR_FILENO) == -1) {
+         sc_log_error("dup2(STDERR) failed");
+         return -1;
+     }
+ 
+     if (fd > STDERR_FILENO) {
+         if (close(fd) == -1) {
+             sc_log_error("close() failed");
+             return -1;
+         }
+     }
+ 
+     return 0;
+}
+
+void style_client_sig_int(int signum)
+{
+    if ( signum == SIGINT) {
+        if (serverSocketFd != -1) {
+            close(serverSocketFd);
+        }
+        exit(0);
+    }else {
+        exit(-1);
+    }
+}
+
+int main(int argc, char *argv[])
+{
+    pthread_t threads[2];
+    apr_pool_t *gPool = NULL;
+    int ret = -1;
 
     apr_pool_initialize();
-    apr_pool_t *gPool = NULL;
     apr_pool_create(&gPool, NULL);
 
     argsParser(gPool, argc, argv);
     init(gPool, gConfig);
 
-    //intervalWork(gPool);
+    if (gConfig->runasdaemon != 1) {
+        signal(SIGPIPE, SIG_IGN);
 
-    //createSocketServer(gPool);
-
-    signal(SIGPIPE, SIG_IGN);
-
-    pthread_t threads[2];
-    int ret = pthread_create(&threads[0], NULL, (void *) interval_work, (void *) gPool);
-    if(ret != 0) {
-        sc_log_error("create thread0 error");
-        exit(1);
-    }
-    ret = pthread_create(&threads[1], NULL, (void *) create_socket_server, (void *) gPool);
-    if(ret != 0) {
-        sc_log_error("create thread1 error");
-        exit(1);
-    }
-
-    char buf[65536];
-    for(;;) {
-        int nBytesRead = read(0, buf, sizeof(buf));
-        if(nBytesRead == 0) {
-            exit(2);
+        ret = pthread_create(&threads[0], NULL, (void *) interval_work, (void *) gPool);
+        if(ret != 0) {
+            sc_log_error("create thread0 error");
+            exit(1);
         }
-        if(errno == EINTR) {
-            continue;
+        ret = pthread_create(&threads[1], NULL, (void *) create_socket_server, (void *) gPool);
+        if(ret != 0) {
+            sc_log_error("create thread1 error");
+            exit(1);
         }
-        if(gConfig->debug) {
-            sc_log_error("%s", buf);
-        }
-    }
 
-    apr_pool_destroy(gPool);
-    printf("finnished");
+        char buf[65536];
+        for(;;) {
+            int nBytesRead = read(0, buf, sizeof(buf));
+            if(nBytesRead == 0) {
+                exit(2);
+            }
+            if(errno == EINTR) {
+                continue;
+            }
+            if(gConfig->debug) {
+                sc_log_error("%s", buf);
+            }
+        }
+
+        apr_pool_destroy(gPool);
+        printf("finnished");
+    } else {
+        /* run as daemon */
+        signal(SIGINT, style_client_sig_int);
+        if ( -1 == style_client_daemon() ) {
+            sc_log_error("run as daemon failed!\n");
+            exit(1);
+        }
+        
+        ret = pthread_create(&threads[0], NULL, (void *) interval_work, (void *) gPool);
+        if(ret != 0) {
+            sc_log_error("create thread0 error");
+            exit(1);
+        }
+        ret = pthread_create(&threads[1], NULL, (void *) create_socket_server, (void *) gPool);
+        if(ret != 0) {
+            sc_log_error("create thread1 error");
+            exit(1);
+        }
+        pthread_join(threads[0], NULL);
+        pthread_join(threads[1], NULL);
+    }
     return 0;
 }
