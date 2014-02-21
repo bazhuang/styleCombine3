@@ -34,7 +34,8 @@ short is_param_disabled_mod(char *uriQuery) {
 	int debugMode = 0;
 	if (NULL != uriQuery) {
 		char *debugModeIndex = strstr(uriQuery, DEBUG_MODE);
-		if (NULL != debugModeIndex && ZERO_END != *(debugModeIndex += 3)) {
+		if (NULL != debugModeIndex && ZERO_END != *(debugModeIndex += strlen(DEBUG_MODE))) {
+            debugModeIndex++; /* skip '=' */
 			debugMode = atoi(&(*debugModeIndex));
 			if (debugMode > 2 || debugMode < 0) {
 				debugMode = 0;

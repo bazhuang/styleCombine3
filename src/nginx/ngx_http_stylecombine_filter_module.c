@@ -317,6 +317,8 @@ ngx_http_stylecombine_header_filter(ngx_http_request_t *r)
     ngx_http_stylecombine_ctx_t   *ctx;                                        
     ngx_http_stylecombine_conf_t  *conf;                                       
     CombineConfig   *sc_conf;
+    ngx_str_t  arg_value;
+    ngx_int_t ret, debugMode;
                                                                        
     conf = ngx_http_get_module_loc_conf(r, ngx_http_stylecombine_filter_module);
                                                                        
@@ -327,7 +329,6 @@ ngx_http_stylecombine_header_filter(ngx_http_request_t *r)
         || (r->headers_out.content_encoding                            
             && r->headers_out.content_encoding->value.len)             
         || r != r->main
-//        || (r->headers_out.content_length_n == -1)
                  
         || r->header_only)                                             
     {                                                                  
@@ -337,6 +338,14 @@ ngx_http_stylecombine_header_filter(ngx_http_request_t *r)
     sc_conf = conf->sc_global_config.pConfig;
     if ( !sc_conf  ) {
         return ngx_http_next_header_filter(r);
+    }
+
+    ret = ngx_http_arg(r, (u_char *)DEBUG_MODE, strlen(DEBUG_MODE), &arg_value);
+    if ( ret == NGX_OK ) {
+        debugMode = ngx_atoi(arg_value.data, arg_value.len);
+        if (debugMode == 1) {
+            return ngx_http_next_header_filter(r);
+        }
     }
 
     /* content type */

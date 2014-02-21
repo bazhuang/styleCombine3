@@ -22,7 +22,7 @@
 #define POSITION_HEAD_WITH_LEN                    "head", 4
 #define POSITION_FOOTER_WITH_LEN                  "footer", 6
 
-#define DEBUG_MODE                                "_debugMode_="
+#define DEBUG_MODE                                "_debugMode_"
 #define RUN_MODE_STATUS_WITH_LEN                  "dis", 3
 
 #define JAVASCRIPT_PREFIX_STR_WITH_LEN            "<script type=\"text/javascript\" src=\"", 36
