@@ -39,6 +39,7 @@ typedef struct {
 } ngx_http_stylecombine_conf_t;
 
 typedef struct {
+    ngx_chain_t                 *in;
     u_char                      *page;
     u_char                      *last;
 

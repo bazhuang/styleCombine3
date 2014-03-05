@@ -480,13 +480,39 @@ ngx_http_stylecombine_read(ngx_http_request_t *r, ngx_chain_t *in)
     ngx_http_stylecombine_ctx_t  *ctx;
 
     ctx = ngx_http_get_module_ctx(r, ngx_http_stylecombine_filter_module);
-    
-    if ( -1 == ctx->page_size ) {
-        ctx->page_size = 0;
+    if (ctx == NULL) {                          
+        return ngx_http_next_body_filter(r, in);
+    }                                           
+
+    if ( in == NULL && ctx->in == NULL ) {
+        return ngx_http_next_body_filter(r, in);
+    }
+
+    /* add the incoming chain to the chain ctx->in */
+    if (in) {
+        if (ngx_chain_add_copy(r->pool, &ctx->in, in) != NGX_OK) {
+                return NGX_ERROR;                                     
+        }                                                         
+    }
+
+    if ( -1 == ctx->page_size || 
+            (ctx->buffered & NGX_HTTP_STYLECOMBINE_BUFFERED) ) {
+        ctx->page_size = ctx->page_size > 0 ? ctx->page_size : 0;
         for (cl = in; cl; cl = cl->next) {
             ctx->page_size += ngx_buf_size(cl->buf);
+            if ( !cl->buf->last_buf )
+                ctx->buffered |= NGX_HTTP_STYLECOMBINE_BUFFERED;
+            else {
+                ctx->buffered &= ~NGX_HTTP_STYLECOMBINE_BUFFERED;
+            }
         }
-    } 
+    } else {
+        return NGX_ERROR;
+    }
+
+    if ( ctx->buffered & NGX_HTTP_STYLECOMBINE_BUFFERED ) {
+        return NGX_AGAIN;
+    }
 
     if (ctx->page == NULL) {
         ctx->page = ngx_palloc(r->pool, ctx->page_size);
@@ -499,10 +525,10 @@ ngx_http_stylecombine_read(ngx_http_request_t *r, ngx_chain_t *in)
 
     p = ctx->last;
 
-    for (cl = in; cl; cl = cl->next) {
+    for (cl = ctx->in; cl; cl = cl->next) {
 
         b = cl->buf;
-        size = b->last - b->pos;
+        size = ngx_buf_size(b);
 
         ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                        "styecombine buf: %uz", size);
@@ -518,11 +544,8 @@ ngx_http_stylecombine_read(ngx_http_request_t *r, ngx_chain_t *in)
             return NGX_OK;
         }
     }
-
-    ctx->last = p;
-    ctx->buffered |= NGX_HTTP_STYLECOMBINE_BUFFERED;
-
-    return NGX_AGAIN;
+    /* should never come to here */
+    return NGX_ERROR;
 }
 
 static void                                               
@@ -632,7 +655,8 @@ ngx_http_stylecombine_process(ngx_http_request_t *r)
     Buffer page_buffer = {NULL, 0, 0};
 
     ctx = ngx_http_get_module_ctx(r, ngx_http_stylecombine_filter_module);
-    ctx->buffered &= ~NGX_HTTP_STYLECOMBINE_BUFFERED;
+    if ( ctx == NULL )
+        return  NULL;
 
     conf = ngx_http_get_module_loc_conf(r, ngx_http_stylecombine_filter_module);
     pConfig = conf->sc_global_config.pConfig;
