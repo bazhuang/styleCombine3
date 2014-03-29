@@ -15,9 +15,9 @@
 
 int addExtStyle(Buffer *destBuf, ParamConfig *paramConfig);
 
-void combineStyles(ParamConfig *paramConfig, LinkedList *styleList, Buffer *combinedStyleBuf[], Buffer *tmpUriBuf, Buffer *versionBuf);
+void combineStyles(ParamConfig *paramConfig, LinkedList *styleList, Buffer *combinedStyleBuf[]);
 
-void combineStylesAsync(ParamConfig *paramConfig, StyleList *styleList, Buffer *headBuf, Buffer *tmpUriBuf, Buffer *versionBuf);
+void combineStylesAsync(ParamConfig *paramConfig, StyleList *styleList, Buffer *headBuf);
 
 void combineStylesDebug(ParamConfig *paramConfig, LinkedList *fullStyleList, Buffer *combinedStyleBuf[]);
 

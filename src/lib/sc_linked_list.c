@@ -19,7 +19,7 @@ LinkedList *linked_list_create(sc_pool_t *pool) {
 	return list;
 }
 
-int add(sc_pool_t *pool, LinkedList *list, void *item) {
+int linked_list_add(sc_pool_t *pool, LinkedList *list, void *item) {
 	if (NULL == list || NULL == item) {
 		return 0;
 	}

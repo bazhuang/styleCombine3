@@ -22,7 +22,11 @@
 #define POSITION_HEAD_WITH_LEN                    "head", 4
 #define POSITION_FOOTER_WITH_LEN                  "footer", 6
 
-#define DEBUG_MODE                                "_debugMode_"
+#define DEBUG_MODE_PARAM                                "_debugMode_"
+#define DEBUG_OFF       0
+#define DEBUG_ON        1
+#define DEBUG_STYLECOMBINE 2
+
 #define RUN_MODE_STATUS_WITH_LEN                  "dis", 3
 
 #define JAVASCRIPT_PREFIX_STR_WITH_LEN            "<script type=\"text/javascript\" src=\"", 36
@@ -32,13 +36,40 @@
 #define URI_SEPARATOR_WITH_LEN                    ",", 1
 #define URL_URI_SPLIT_WITH_LEN                    "??", 2
 
-
 enum StyleType                   { SC_TYPE_CSS, SC_TYPE_JS };
 /*position char */
 enum PositionEnum                { SC_TOP, SC_HEAD, SC_FOOTER, SC_NONE };
 
 /*tag field*/
 enum TagNameEnum                 { SC_BHEAD, SC_EHEAD, SC_EBODY, SC_LINK, SC_SCRIPT, SC_TEXTAREA, SC_COMMENT_EXPRESSION, SC_TN_NONE };
+
+typedef struct {
+	int                  bIndex;
+	int                  eIndex;
+	//用于存放，那些没有合并的style；有内容时 bIndex和eIndex都视无效
+	Buffer              *cntBlock;
+	//当前对象的类型如是：<head>,</head>, </body>等
+	enum TagNameEnum     tagNameEnum;
+} ContentBlock;
+
+typedef struct StyleField {
+	short                 async;
+    int                   amd;
+	enum StyleType        styleType;
+	short                 domainIndex;
+	Buffer               *styleUri;
+	Buffer               *group;
+	Buffer               *media;
+	Buffer               *version;
+    Buffer               *amdVersion;
+	enum PositionEnum     position;
+} StyleField;
+
+typedef struct {
+	short                domainIndex;
+	Buffer              *group;
+	LinkedList          *list[2];
+} StyleList;
 
 typedef struct {
 	Buffer            *prefix;
@@ -62,34 +93,6 @@ typedef struct {
 	LinkedList        *whiteList;
 } CombineConfig;
 
-typedef struct StyleField {
-	short                 async;
-    int                   amd;
-	enum StyleType        styleType;
-	short                 domainIndex;
-	Buffer               *styleUri;
-	Buffer               *group;
-	Buffer               *media;
-	Buffer               *version;
-    Buffer               *amdVersion;
-	enum PositionEnum     position;
-} StyleField;
-
-typedef struct {
-	short                domainIndex;
-	Buffer              *group;
-	LinkedList          *list[2];
-} StyleList;
-
-typedef struct {
-	int                  bIndex;
-	int                  eIndex;
-	//用于存放，那些没有合并的style；有内容时 bIndex和eIndex都视无效
-	Buffer              *cntBlock;
-	//当前对象的类型如是：<head>,</head>, </body>等
-	enum TagNameEnum     tagNameEnum;
-} ContentBlock;
-
 typedef struct  {
 #ifndef SC_NGINX_PLATFORM
 	sc_thread_mutex_t   *getDataLock, *intervalCheckLock;
@@ -109,16 +112,25 @@ typedef struct  {
 } GlobalVariable;
 
 typedef struct {
+    /* shared with all requests */
+	GlobalVariable      *globalVariable;
+	CombineConfig       *pConfig; /* WEB container's configure */
+	StyleParserTag     **styleParserTags;
+    
+    /* per request variables */
+	sc_pool_t           *pool; /* per request's pool */
+    char                *unparsed_uri;
+    Buffer              *maxUrlBuf; /* used to save parsed style URI, 2 times of pConfig->maxUrlLen */
+    Buffer              *versionBuf; /* used to save style URI version */
+    Buffer              *tmpUriBuf;  /* used to save combined URI temporary */
 	StyleField          *styleField;
 	Buffer              *domain;
+	int                  styleCount;
 	short                isNewLine;
 	short                needExt;
+
+    /* debug switch */
 	short                debugMode;
-	int                  styleCount;
-	CombineConfig       *pConfig;
-	StyleParserTag     **styleParserTags;
-	GlobalVariable      *globalVariable;
-	sc_pool_t           *pool;
 } ParamConfig;
 
 void global_variable_init(sc_pool_t *pool, CombineConfig *pConfig, GlobalVariable *globalVariable);

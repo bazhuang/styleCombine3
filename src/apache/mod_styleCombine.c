@@ -141,10 +141,17 @@ static int put_data_to_bucket(request_rec *req, LinkedList *blockList, Buffer *c
 			break;
 		}
 
+#if 1
 		if(0 != block->bIndex || 0 != block->eIndex) {
 			offsetLen                = block->eIndex + 1 - block->bIndex;
 			totalLen += addBucket(req->connection, ctx->pbbOut, ctx->buf->ptr + block->bIndex, offsetLen);
 		}
+#else
+        if ( block->bIndex >= 0 && block->eIndex > block->bIndex ) {
+            offsetLen = block->eIndex + 1 - block->bIndex;
+            totalLen += addBucket(req->connection, ctx->pbbOut, ctx->buf->ptr + block->bIndex, offsetLen);
+        }
+#endif
 
 		if(NULL != combinedUriBuf) {
 			totalLen += addBucket(req->connection, ctx->pbbOut, combinedUriBuf->ptr, combinedUriBuf->used);
@@ -308,14 +315,16 @@ static apr_status_t styleCombineOutputFilter(ap_filter_t *f, apr_bucket_brigade 
 			Buffer *combinedStyleBuf[3] = {NULL, NULL, NULL};
 			LinkedList *blockList = linked_list_create(r->pool);
 
-			ParamConfig *paramConfig  = (ParamConfig *) sc_palloc(r->pool, sizeof(ParamConfig));
+			ParamConfig *paramConfig  = (ParamConfig *) sc_pcalloc(r->pool, sizeof(ParamConfig));
 			paramConfig->pool      = r->pool;
+            paramConfig->unparsed_uri = r->unparsed_uri;
+
 			paramConfig->debugMode = debugMode;
-			paramConfig->pConfig   = pConfig;
 			paramConfig->styleParserTags = styleParserTags;
+			paramConfig->pConfig   = pConfig;
 			paramConfig->globalVariable  = &globalVariable;
 
-			int styleCount = html_parser(paramConfig, ctx->buf, combinedStyleBuf, blockList, r->unparsed_uri);
+			int styleCount = sc_html_parser(paramConfig, ctx->buf, combinedStyleBuf, blockList);
 			if(0 == styleCount) {
 				//FIXME: 没有找到任何的style，则直接保持原来的数据输出，不需要做任何变化（未实现，需要保留原backet列表）
 				totoalLen = addBucket(r->connection, ctx->pbbOut, ctx->buf->ptr, ctx->buf->used);
@@ -440,7 +449,7 @@ static const char *setBlackList(cmd_parms *cmd, void *in_dconf, const char *arg)
 	apr_pool_cleanup_register(cmd->pool, (void *) regexp, regex_cleanup,
 	                              apr_pool_cleanup_null);
 	CombineConfig * pConfig = ap_get_module_config(cmd->server->module_config, &styleCombine_module);
-	add(cmd->pool, pConfig->blackList, regexp);
+	linked_list_add(cmd->pool, pConfig->blackList, regexp);
 	return NULL;
 }
 
@@ -452,7 +461,7 @@ static const char *setWhiteList(cmd_parms *cmd, void *in_dconf, const char *arg)
 	apr_pool_cleanup_register(cmd->pool, (void *) regexp, regex_cleanup,
 		                              apr_pool_cleanup_null);
 	CombineConfig * pConfig = ap_get_module_config(cmd->server->module_config, &styleCombine_module);
-	add(cmd->pool, pConfig->whiteList, regexp);
+	linked_list_add(cmd->pool, pConfig->whiteList, regexp);
 	return NULL;
 }
 

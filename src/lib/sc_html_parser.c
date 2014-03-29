@@ -464,14 +464,14 @@ static void parseDependecies(sc_pool_t *pool, GlobalVariable *globalVariable,
 
 //        log_error("url is %s", styleFieldAmd->styleUri->ptr);
 
-        add(pool, listItem, styleFieldAmd);
+        linked_list_add(pool, listItem, styleFieldAmd);
     }
 
     //free(result);
 }
 
-int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt,
-        Buffer *combinedStyleBuf[3], LinkedList *blockList, char *unparsed_uri)
+int sc_html_parser(ParamConfig *paramConfig, Buffer *sourceCnt,
+        Buffer *combinedStyleBuf[3], LinkedList *blockList)
 {
 
 	if (SC_IS_EMPTY_BUFFER(sourceCnt) || NULL == combinedStyleBuf || NULL == blockList) {
@@ -479,6 +479,7 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt,
 	}
 	sc_pool_t *req_pool   = paramConfig->pool;
 	CombineConfig *pConfig= paramConfig->pConfig;
+    char *unparsed_uri = paramConfig->unparsed_uri;
 	char *input           = sourceCnt->ptr;
 	//创建一个列表，用于存放所有的索引对象，包括一些未分组和未指定位置的style
 	ContentBlock *block   = NULL;
@@ -549,8 +550,9 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt,
 			}
 
 			NEXT_CHARS(istr, eIndex, tagPatternsLen[SC_BHEAD] + 1);    //偏移 > 1个结束符字符长度
-			block         = contentBlock_create_init(req_pool, bIndex, eIndex, SC_BHEAD);
-			add(req_pool, blockList, (void *) block);
+			block = contentBlock_create_init(req_pool, bIndex, eIndex, SC_BHEAD);
+            if (block)
+                linked_list_add(req_pool, blockList, (void *) block);
 			RESET(bIndex, eIndex);
 			posHTMLTagExist[SC_TOP] = 1;
 			break;
@@ -579,11 +581,12 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt,
 				NEXT_CHAR(istr, eIndex);
 				continue;
 			}
+#if 1
 			/**
 			 * 这里需要注意一个问题，当以<script data-sc-pos=head src=a.js></script>结束后紧跟</head>时。
 			 * 那么bIndex 与 eIndex - 1是相等的，所以创建的block为NULL，最终导致a.js没有在head中输出，而是消失了。
 			 */
-			block         = contentBlock_create_init(req_pool, bIndex, eIndex - 1, tnameEnum); // </
+			block = contentBlock_create_init(req_pool, bIndex, eIndex - 1, tnameEnum); // </
 			if(NULL == block) {
 				block = (ContentBlock *) sc_palloc(req_pool, sizeof(ContentBlock));
 				if(NULL == block) {
@@ -594,7 +597,12 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt,
 				block->tagNameEnum  = tnameEnum;
 			}
 
-			add(req_pool, blockList, (void *) block);
+			linked_list_add(req_pool, blockList, (void *) block);
+#else
+            block = contentBlock_create_init(req_pool, bIndex, eIndex -1, tnameEnum);
+            if ( block )
+                linked_list_add(req_pool, blockList, (void *) block);
+#endif
 			bIndex        = eIndex;
 			NEXT_CHARS(istr, eIndex, tagPatternsLen[tnameEnum] + 1);    //偏移 /head>|/body> 6个字符长度
 			posHTMLTagExist[posEnum] = 1;
@@ -641,8 +649,9 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt,
 			}
 
 			//扫过的内容位置记录下来保存到列表中
-			block         = contentBlock_create_init(req_pool, bIndex, eIndex - 1, tnameEnum);
-			add(req_pool, blockList, (void *) block);
+			block = contentBlock_create_init(req_pool, bIndex, eIndex - 1, tnameEnum);
+            if ( block ) 
+                linked_list_add(req_pool, blockList, (void *) block);
 			bIndex        = eIndex;
 
 			if(LOG_STYLE_FIELD == paramConfig->pConfig->printLog) {
@@ -669,10 +678,12 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt,
 			//IE条件表达式里面的style不能做去重操作
 			if(isExpression) {
 				styleField->version = get_string_version(req_pool, unparsed_uri, styleField->styleUri, paramConfig->globalVariable);
-				block               = contentBlock_create_init(req_pool, -1, 0, tnameEnum);
-				block->cntBlock     = buffer_init_size(req_pool, paramConfig->domain->used + styleField->styleUri->used + 100);
-				add(req_pool, blockList, (void *) block);
-				addExtStyle(block->cntBlock, paramConfig);
+				block = contentBlock_create_init(req_pool, -1, 0, tnameEnum);
+                if ( block ) {
+                    block->cntBlock = buffer_init_size(req_pool, paramConfig->domain->used + styleField->styleUri->used + 100);
+                    linked_list_add(req_pool, blockList, (void *) block);
+                    addExtStyle(block->cntBlock, paramConfig);
+                }
 				continue;
 			}
 
@@ -688,10 +699,12 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt,
             }
 			//当没有使用异步并且又没有设置位置则保持原位不动
 			if(0 == styleField->async && SC_NONE == styleField->position) {
-				block               = contentBlock_create_init(req_pool, -1, 0, tnameEnum);
-				block->cntBlock     = buffer_init_size(req_pool, paramConfig->domain->used + styleField->styleUri->used + 100);
-				add(req_pool, blockList, (void *) block);
-				addExtStyle(block->cntBlock, paramConfig);
+				block = contentBlock_create_init(req_pool, -1, 0, tnameEnum);
+                if ( block ) {
+                    block->cntBlock = buffer_init_size(req_pool, paramConfig->domain->used + styleField->styleUri->used + 100);
+                    linked_list_add(req_pool, blockList, (void *) block);
+                    addExtStyle(block->cntBlock, paramConfig);
+                }
 				continue;
 			}
 
@@ -729,7 +742,7 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt,
 					/**
 					 * 将所有的styleList放入相应的 异步和非异步的列表中去。用于输出合并时使用。
 					 */
-					add(req_pool, (styleField->async == 1 ? asyncStyleList : syncStyleList), styleList);
+					linked_list_add(req_pool, (styleField->async == 1 ? asyncStyleList : syncStyleList), styleList);
 				}
 
 				LinkedList *itemList = linked_list_create(req_pool);
@@ -743,7 +756,7 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt,
                     parseDependecies(req_pool, paramConfig->globalVariable, styleField, 
                                 itemList, unparsed_uri, duplicates);
                 }else{
-                    add(req_pool, itemList, styleField);
+                    linked_list_add(req_pool, itemList, styleField);
                 }
 
 				styleList->domainIndex = styleField->domainIndex;
@@ -760,7 +773,7 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt,
                     parseDependecies(req_pool, paramConfig->globalVariable, styleField, 
                         styleList->list[(int) styleField->styleType], unparsed_uri, duplicates);
                 }else{
-                    add(req_pool, styleList->list[(int) styleField->styleType], styleField);
+                    linked_list_add(req_pool, styleList->list[(int) styleField->styleType], styleField);
                 }
 			}
 			//去掉style后面的回车 制表 空格等符号
@@ -835,7 +848,8 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt,
 
 	//追加尾部的内容
 	block = contentBlock_create_init(req_pool, bIndex, ++eIndex, SC_TN_NONE);
-	add(req_pool, blockList, (void *) block);
+    if ( block ) 
+        linked_list_add(req_pool, blockList, (void *) block);
 
 	ListNode      *node = NULL;
 	//对解析出来的异步style URL与同步style进行去重。如果同步的style已经存在，则丢弃异步的style
@@ -848,7 +862,7 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt,
 		if(NULL == asyncSLGroup) {
 			asyncSDGroups[styleList->domainIndex] = asyncSLGroup = linked_list_create(req_pool);
 		}
-		add(req_pool, asyncSLGroup, styleList);
+		linked_list_add(req_pool, asyncSLGroup, styleList);
 
 		for(i = 0; i < 2; i++) {
 			LinkedList *list = styleList->list[i];
@@ -878,9 +892,6 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt,
 
 	if(0 == paramConfig->debugMode) {
 
-		Buffer *versionBuf = buffer_init_size(req_pool, 1024);
-		Buffer *tmpUriBuf = buffer_init_size(req_pool, pConfig->maxUrlLen + 50);
-
 		//将解析出来的异步style URL进行合并
 		short addScriptPic = 0;
 		Buffer *headBuf = NULL;
@@ -902,7 +913,7 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt,
 				string_append(req_pool, headBuf, "={", 2);
 				while(NULL != node) {
 					styleList = (StyleList *) node->value;
-					combineStylesAsync(paramConfig, styleList, headBuf, tmpUriBuf, versionBuf);
+					combineStylesAsync(paramConfig, styleList, headBuf);
 					node = (ListNode *) node->next;
 				}
 				headBuf->used -= 1;
@@ -921,8 +932,7 @@ int html_parser(ParamConfig *paramConfig, Buffer *sourceCnt,
 				if(NULL == list) {
 					continue;
 				}
-				SC_BUFFER_CLEAN(tmpUriBuf); SC_BUFFER_CLEAN(versionBuf);
-				combineStyles(paramConfig, list, combinedStyleBuf, tmpUriBuf, versionBuf);
+				combineStyles(paramConfig, list, combinedStyleBuf);
 			}
 		}
 	} else if(2 == paramConfig->debugMode) {

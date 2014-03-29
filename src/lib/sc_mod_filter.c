@@ -33,8 +33,8 @@ short is_allowed_contentType(char *contentType, char *allowedContentType) {
 short is_param_disabled_mod(char *uriQuery) {
 	int debugMode = 0;
 	if (NULL != uriQuery) {
-		char *debugModeIndex = strstr(uriQuery, DEBUG_MODE);
-		if (NULL != debugModeIndex && ZERO_END != *(debugModeIndex += strlen(DEBUG_MODE))) {
+		char *debugModeIndex = strstr(uriQuery, DEBUG_MODE_PARAM);
+		if (NULL != debugModeIndex && ZERO_END != *(debugModeIndex += strlen(DEBUG_MODE_PARAM))) {
             debugModeIndex++; /* skip '=' */
 			debugMode = atoi(&(*debugModeIndex));
 			if (debugMode > 2 || debugMode < 0) {

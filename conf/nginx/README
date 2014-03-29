@@ -1,0 +1,7 @@
+
+在现有stylecombine nginx版本中，由于stylecombine架构本本身的问题，配置时需要注意以下两个问题：
+1.如果stylecombine处理的页面来自于上游(upstream), 需要注意把proxy_buffers开启得大一些，具体来说就是要比stylecombine所部署的应用可能请求到的最大html页面稍微大一点，这样保证不会出现上游等待stylecombine处理完output_chain中的数据而最终超时的问题。
+
+2.如果stylecombine处理的是本地页面。在现有的stylecombine架构下，硬编码最大能处理的HTML页面为2MiB, 我们认为2MiB的HTML页面已经很大，对于目前的浏览器来说渲染2MiB的页面也是一个不小的挑战。如果应用的页面会出现大于2MiB,stylecombine将不会工作，直接输出原页面。
+
+以上两个问题在stylecombine核心处理逻辑改变之后才能得到解决:).

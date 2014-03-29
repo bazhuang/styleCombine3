@@ -27,6 +27,6 @@ typedef struct {
  */
 LinkedList *linked_list_create(sc_pool_t *pool);
 
-int add(sc_pool_t *pool, LinkedList *list, void *item);
+int linked_list_add(sc_pool_t *pool, LinkedList *list, void *item);
 
 #endif /* SC_LINKED_LIST_H_ */

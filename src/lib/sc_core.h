@@ -1,5 +1,5 @@
 /*
- * sc_html_parser.h
+ * sc_core.h
  *
  *  Created on: Oct 19, 2013
  *      Author: zhiwenmizw
@@ -10,6 +10,6 @@
 
 #include "sc_config.h"
 
-int sc_html_parser(ParamConfig *paramConfig, Buffer *sourceCnt, Buffer *combinedStyleBuf[3], LinkedList *blockList);
+int sc_core(ParamConfig *paramConfig, Buffer *sourceCnt, Buffer *combinedStyleBuf[3], LinkedList *blockList);
 
 #endif /* SC_HTML_PARSER_H_ */

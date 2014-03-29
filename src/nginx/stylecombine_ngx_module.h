@@ -43,11 +43,13 @@ typedef struct {
     u_char                      *page;
     u_char                      *last;
 
-    off_t                      page_size;
+    off_t                       saved_page_size;
+    off_t                       page_size;
     ngx_uint_t                  phase;
     unsigned                    buffered;
 
     short                       isHTML;
+    short                       debugMode;
     ngx_http_request_t  *request;
 } ngx_http_stylecombine_ctx_t;
 
