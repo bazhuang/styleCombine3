@@ -133,7 +133,7 @@ ngx_http_stylecombine_create_conf(ngx_conf_t *cf)
         return NULL;                                           
     }                                                          
                                                                
-    conf->enable = 0;                             
+    conf->enable = NGX_CONF_UNSET;                             
     ngx_str_null(&conf->app_name);
     conf->old_domains = NGX_CONF_UNSET_PTR;
     conf->new_domains = NGX_CONF_UNSET_PTR;
