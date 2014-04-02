@@ -2,6 +2,11 @@
  * Author: Bryton Lee
  */
 
+/*
+ * strcasestr is a nonstandard extension,
+ * need to define _GNU_SOURCE before any #include */
+#define _GNU_SOURCE
+#include <string.h>
 #include "sc_version.h"
 #include "sc_combine.h"
 #include "sc_log.h"
@@ -56,6 +61,7 @@ do{ \
 #define SC_HTML_TEXTAREA "<textarea"
 #define SC_HTML_COMMENT  "<!--"
 #define SC_HTML_EBODY    "</body>"
+#define SC_HTML_TAG_LEN(tag) (sizeof(tag) - 1)
 
 typedef struct html_tag_flag_t {
     unsigned int pad:1;
@@ -169,11 +175,12 @@ parserTag(ParamConfig *paramConfig, StyleParserTag *ptag,
         return ret;
     }
 
+    pool = paramConfig->pool;
     CombineConfig *pConfig= paramConfig->pConfig;
 
     maxUrlBuf = paramConfig->maxUrlBuf;
     if ( !maxUrlBuf )
-        buffer_init_size(pool, pConfig->maxUrlLen * 2);
+        maxUrlBuf = paramConfig->maxUrlBuf = buffer_init_size(pool, pConfig->maxUrlLen * 2);
     else 
         SC_BUFFER_CLEAN(maxUrlBuf);
 
@@ -552,7 +559,8 @@ sc_core_page_scan(sc_pool_t *pool, Buffer *html_page,
     char *c, *tmp, *page;
     unsigned int   rest;
     ContentBlock *block = NULL;
-    int block_begin, block_end;
+    //int block_begin, block_end;
+    size_t  block_begin, block_end;
     int ret = -1;
 
     if ( !pool || !html_page || !content_lst || !style_lst )
@@ -565,10 +573,13 @@ sc_core_page_scan(sc_pool_t *pool, Buffer *html_page,
     block_begin = block_end = 0;
     c = page;
     while ( *c ) {
-        while ( *c != '<') {
+        while ( block_end < html_page->size && *c != '<') {
             c++;
             block_end++;
         }
+
+        if ( block_end >= html_page->size )
+            break;
 
         /*
          * sc_core_scan only care follow HTML tags:
@@ -585,19 +596,19 @@ sc_core_page_scan(sc_pool_t *pool, Buffer *html_page,
         /* Note: rest size should biger or equal than HTML tag (which we interested in) size.
          * otherwise strncasecmp will trigger wrong memory access */
         rest = (page + html_page->used) - c;
-        if ( rest >= sizeof(SC_HTML_HEAD) ) {
-            ret = strncasecmp(c, SC_HTML_HEAD, sizeof(SC_HTML_HEAD)); 
+        if ( rest >= SC_HTML_TAG_LEN(SC_HTML_HEAD) ) {
+            ret = strncasecmp(c, SC_HTML_HEAD, SC_HTML_TAG_LEN(SC_HTML_HEAD)); 
             if ( ret == 0 ) {
                 /* <head> found */
                 if ( flag.head ) {
                     /* Warning: duplicated <head>, just ignore it. */
-                    c += sizeof(SC_HTML_HEAD);
-                    block_end += sizeof(SC_HTML_HEAD);
+                    c += SC_HTML_TAG_LEN(SC_HTML_HEAD);
+                    block_end += SC_HTML_TAG_LEN(SC_HTML_HEAD);
                     continue;
                 }
                 flag.head = 1;
-                c += sizeof(SC_HTML_HEAD);
-                block_end += sizeof(SC_HTML_HEAD);
+                c += SC_HTML_TAG_LEN(SC_HTML_HEAD);
+                block_end += SC_HTML_TAG_LEN(SC_HTML_HEAD);
                 block = content_block_create(pool, block_begin, block_end, SC_BHEAD);
                 if ( block ) {
                     /* add to content list */
@@ -611,8 +622,8 @@ sc_core_page_scan(sc_pool_t *pool, Buffer *html_page,
             }
         }
 
-        if ( rest >= sizeof(SC_HTML_EHEAD) ) {
-            ret = strncasecmp(c, SC_HTML_EHEAD, sizeof(SC_HTML_EHEAD));
+        if ( rest >= SC_HTML_TAG_LEN(SC_HTML_EHEAD) ) {
+            ret = strncasecmp(c, SC_HTML_EHEAD, SC_HTML_TAG_LEN(SC_HTML_EHEAD));
             if ( ret == 0 ) {
                 /* </head> found */
                 if ( !flag.head ) {
@@ -620,13 +631,13 @@ sc_core_page_scan(sc_pool_t *pool, Buffer *html_page,
                     return -1;
                 } else if ( flag.ehead ) {
                     /* Warning: duplicated </head>, just ignore it. */
-                    c += sizeof(SC_HTML_EHEAD);
-                    block_end += sizeof(SC_HTML_EHEAD);
+                    c += SC_HTML_TAG_LEN(SC_HTML_EHEAD);
+                    block_end += SC_HTML_TAG_LEN(SC_HTML_EHEAD);
                     continue;
                 }
                 flag.ehead = 1;
-                c += sizeof(SC_HTML_EHEAD);
-                block_end += sizeof(SC_HTML_EHEAD);
+                c += SC_HTML_TAG_LEN(SC_HTML_EHEAD);
+                block_end += SC_HTML_TAG_LEN(SC_HTML_EHEAD);
                 block = content_block_create(pool, block_begin, block_end, SC_EHEAD);
                 if ( block ) {
                     /* add to content list */
@@ -640,8 +651,8 @@ sc_core_page_scan(sc_pool_t *pool, Buffer *html_page,
             }
         }
 
-        if ( rest >= sizeof(SC_HTML_LINK) ) {
-            ret = strncasecmp(c, SC_HTML_LINK, sizeof(SC_HTML_LINK));
+        if ( rest >= SC_HTML_TAG_LEN(SC_HTML_LINK) ) {
+            ret = strncasecmp(c, SC_HTML_LINK, SC_HTML_TAG_LEN(SC_HTML_LINK));
             if ( ret == 0 ) {
                 /* <link found */
                 if ( !flag.link )
@@ -659,10 +670,10 @@ sc_core_page_scan(sc_pool_t *pool, Buffer *html_page,
                     }
                 }
                 /* find the end of <link */
-                tmp = strstr(c, "/>");
+                tmp = strstr(c, ">");
                 if ( tmp ) {
-                    block_end = tmp - c + 2; /* 2 means size of "/>" */
-                    c = tmp + 2; /* ditto */
+                    block_end += tmp - c + 1; /* 1 means size of ">" */
+                    c = tmp + 1; /* ditto */
                     block = content_block_create(pool, block_begin, block_end, SC_LINK);
                     if ( block ) {
                         /* add to style list */
@@ -680,8 +691,8 @@ sc_core_page_scan(sc_pool_t *pool, Buffer *html_page,
             }
         }
 
-        if ( rest >= sizeof(SC_HTML_SCRIPT) ) {
-            ret = strncasecmp(c, SC_HTML_SCRIPT, sizeof(SC_HTML_SCRIPT));
+        if ( rest >= SC_HTML_TAG_LEN(SC_HTML_SCRIPT) ) {
+            ret = strncasecmp(c, SC_HTML_SCRIPT, SC_HTML_TAG_LEN(SC_HTML_SCRIPT));
             if ( ret == 0 ) {
                 /* <script found */
                 if ( !flag.script ) {
@@ -705,8 +716,8 @@ sc_core_page_scan(sc_pool_t *pool, Buffer *html_page,
                 if ( !tmp ) {
                     return -1;
                 }
-                block_end = tmp + sizeof("</script>") - c;
-                c = tmp + sizeof("</script>");
+                block_end += tmp + SC_HTML_TAG_LEN("</script>") - c;
+                c = tmp + SC_HTML_TAG_LEN("</script>");
                 block = content_block_create(pool, block_begin, block_end, SC_SCRIPT);
                 if ( block ) {
                     /* add to style list */
@@ -720,8 +731,8 @@ sc_core_page_scan(sc_pool_t *pool, Buffer *html_page,
             }
         }
         
-        if ( rest >= sizeof(SC_HTML_TEXTAREA) ) {
-            ret = strncasecmp(c, SC_HTML_TEXTAREA, sizeof(SC_HTML_TEXTAREA));
+        if ( rest >= SC_HTML_TAG_LEN(SC_HTML_TEXTAREA) ) {
+            ret = strncasecmp(c, SC_HTML_TEXTAREA, SC_HTML_TAG_LEN(SC_HTML_TEXTAREA));
             if ( ret == 0 ) {
                 /* </textarea found  */
                 if ( !flag.textarea )
@@ -729,19 +740,19 @@ sc_core_page_scan(sc_pool_t *pool, Buffer *html_page,
 
                 /* </textarea will not add to content list alone, just skip 
                  * the while tag */
-                tmp = strcasestr(c,"</textarea>");
+                tmp = strcasestr(c, "</textarea>");
                 if ( !tmp ) {
                     /* Warning: can not find </textarea> to terminate <textarea */
                     return -1;
                 }
-                block_end = tmp + sizeof("</textarea>") - c;
-                c = tmp + sizeof("</textarea>");
+                block_end += tmp + SC_HTML_TAG_LEN("</textarea>") - c;
+                c = tmp + SC_HTML_TAG_LEN("</textarea>");
                 continue;
             }
         }
                 
-        if ( rest >= sizeof(SC_HTML_COMMENT) ) {
-            ret = strncmp(c, SC_HTML_COMMENT, sizeof(SC_HTML_COMMENT));
+        if ( rest >= SC_HTML_TAG_LEN(SC_HTML_COMMENT) ) {
+            ret = strncmp(c, SC_HTML_COMMENT, SC_HTML_TAG_LEN(SC_HTML_COMMENT));
             if ( ret == 0) {
                 /* <!-- found */
                 if ( !flag.comment )
@@ -755,25 +766,25 @@ sc_core_page_scan(sc_pool_t *pool, Buffer *html_page,
                     return -1;
                 }
                 /* TODO: support IE */
-                block_end = tmp + sizeof("-->") - c;
-                c = tmp + sizeof("-->");
+                block_end += tmp + SC_HTML_TAG_LEN("-->") - c;
+                c = tmp + SC_HTML_TAG_LEN("-->");
                 continue;
             }
         }
 
-        if ( rest >= sizeof(SC_HTML_EBODY) ) {
-            ret = strncasecmp(c, SC_HTML_EBODY, sizeof(SC_HTML_EBODY));
+        if ( rest >= SC_HTML_TAG_LEN(SC_HTML_EBODY) ) {
+            ret = strncasecmp(c, SC_HTML_EBODY, SC_HTML_TAG_LEN(SC_HTML_EBODY));
             if ( ret == 0 ) {
                 /* </body> found */
                 if ( flag.ebody ) {
                     /* Warning: duplicated </body> found, just ignore it */
-                    c += sizeof(SC_HTML_EBODY);
-                    block_end += sizeof(SC_HTML_EBODY);
+                    c += SC_HTML_TAG_LEN(SC_HTML_EBODY);
+                    block_end += SC_HTML_TAG_LEN(SC_HTML_EBODY);
                     continue;
                 }
                 flag.ebody = 1;
-                c += sizeof(SC_HTML_EBODY);
-                block_end += sizeof(SC_HTML_EBODY);
+                c += SC_HTML_TAG_LEN(SC_HTML_EBODY);
+                block_end += SC_HTML_TAG_LEN(SC_HTML_EBODY);
                 block = content_block_create(pool, block_begin, block_end, SC_EBODY);
                 if ( block ) {
                     /* add to content list */
@@ -797,7 +808,7 @@ sc_core_page_scan(sc_pool_t *pool, Buffer *html_page,
         return 0;
     }
 
-    block_end--; /* because *(page + block_end ) == '\0'; strip the last '\0' */ 
+    //block_end--; /* because *(page + block_end ) == '\0'; strip the last '\0' */ 
     /* add tail content to content block */
     if ( block_end > block_begin ) {
         block = content_block_create(pool, block_begin, block_end, SC_TN_NONE);

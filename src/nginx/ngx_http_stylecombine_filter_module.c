@@ -133,7 +133,7 @@ ngx_http_stylecombine_create_conf(ngx_conf_t *cf)
         return NULL;                                           
     }                                                          
                                                                
-    conf->enable = NGX_CONF_UNSET;                             
+    conf->enable = 0;                             
     ngx_str_null(&conf->app_name);
     conf->old_domains = NGX_CONF_UNSET_PTR;
     conf->new_domains = NGX_CONF_UNSET_PTR;
@@ -211,6 +211,8 @@ static char *ngx_http_stylecombine_merge_conf(ngx_conf_t *cf,void *parent, void 
     /* enable */
     ngx_conf_merge_value(conf->enable, prev->enable, 0);
     sc_conf->enabled = (short )conf->enable;
+    if ( !conf->enable )
+        return NGX_CONF_OK;
 
     /* appname */
     ngx_str_t sc_app_unknow = ngx_string("SC_APP_NAME_UNKNOW");
@@ -345,7 +347,8 @@ ngx_http_stylecombine_header_filter(ngx_http_request_t *r)
     }
 
     /* content type */
-    if ( ngx_strncasecmp(r->headers_out.content_type.data, conf->filter_cntx_type.data, \
+    if ( !r->headers_out.content_type.len || !r->headers_out.content_type.data || \
+            ngx_strncasecmp(r->headers_out.content_type.data, conf->filter_cntx_type.data, \
            conf->filter_cntx_type.len) != 0 ) {
         return ngx_http_next_header_filter(r);
     }
