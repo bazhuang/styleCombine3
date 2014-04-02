@@ -928,14 +928,15 @@ sc_core_style_parse(ParamConfig *paramConfig, Buffer *html_page,
             //tmp_block = content_block_create(pool, -1, 0, block->tagNameEnum);
             tmp_block = content_block_create(pool, block->bIndex, block->eIndex, block->tagNameEnum);
             if ( tmp_block ) {
-                block->cntBlock = buffer_init_size(pool, 
-                        paramConfig->domain->used + styleField->styleUri->used + 100);
-
                 /* FIXME: INIT_TAG_CONFIG initialized some variables 
                  * that will be used later, but I think 
                  * these change to local variables will be better. */
                 INIT_TAG_CONFIG(paramConfig, styleField, 
                         paramConfig->pConfig->newDomains[styleField->domainIndex], 0);
+
+                block->cntBlock = buffer_init_size(pool, 
+                        paramConfig->domain->used + styleField->styleUri->used + 100);
+
                 addExtStyle(block->cntBlock, paramConfig);
 
                 content_list_order_insert(pool, content_lst, (void *)tmp_block);
@@ -947,8 +948,8 @@ sc_core_style_parse(ParamConfig *paramConfig, Buffer *html_page,
             } else {
                 /* bad lucky */
                content_list_order_insert(pool, content_lst, (void *)block); 
-               continue;
             }
+           continue;
         }
 
         group_hash = domains[styleField->domainIndex];
@@ -1000,7 +1001,7 @@ sc_core_style_parse(ParamConfig *paramConfig, Buffer *html_page,
 
 static int
 sc_core_split_asynclist_by_domain(sc_pool_t *pool, LinkedList *asynclist,
-        LinkedList **async_list_domain[DOMAINS_COUNT])
+        LinkedList *async_list_domain[DOMAINS_COUNT])
 {
     int ret = -1;
     ListNode    *node = NULL;
@@ -1014,14 +1015,14 @@ sc_core_split_asynclist_by_domain(sc_pool_t *pool, LinkedList *asynclist,
     
     for ( node = asynclist->first; node ; node = node->next ) {
         styleList = (StyleList *)node->value;
-        domain_list = *async_list_domain[styleList->domainIndex];
+        domain_list = async_list_domain[styleList->domainIndex];
         if ( !domain_list ) {
             domain_list = linked_list_create(pool);
             if ( !domain_list ) {
                 /* create list failed!!! */
                 return ret;
             }
-            *async_list_domain[styleList->domainIndex] = domain_list;
+            async_list_domain[styleList->domainIndex] = domain_list;
         }
         linked_list_add(pool, domain_list, styleList);
     }
@@ -1030,7 +1031,7 @@ sc_core_split_asynclist_by_domain(sc_pool_t *pool, LinkedList *asynclist,
 
 static int
 sc_core_combine_async_style(ParamConfig *paramConfig, 
-        LinkedList **async_list_domain[DOMAINS_COUNT], Buffer *combinedStyleBuf[3])
+        LinkedList *async_list_domain[DOMAINS_COUNT], Buffer *combinedStyleBuf[3])
 {
     CombineConfig *pConfig = NULL;
     sc_pool_t *pool;
@@ -1056,7 +1057,7 @@ sc_core_combine_async_style(ParamConfig *paramConfig,
     pool = paramConfig->pool;
 
     for ( i = 0; i < DOMAINS_COUNT; i++ ) {
-        domain_list = *async_list_domain[i];
+        domain_list = async_list_domain[i];
         if ( !domain_list ) {
             continue;
         }
@@ -1155,7 +1156,7 @@ int sc_core(ParamConfig *paramConfig, Buffer *html_page,
        Buffer *combinedStyleBuf[3], LinkedList *blockList)
 {
     sc_pool_t *pool;
-    LinkedList *content_lst, *style_lst;
+    LinkedList *style_lst;
     LinkedList *syncStyleList, *asyncStyleList;
     LinkedList *async_list_domain[DOMAINS_COUNT] = { NULL, NULL };
     int stylecount = -1;
@@ -1168,9 +1169,7 @@ int sc_core(ParamConfig *paramConfig, Buffer *html_page,
         return ret;
 
     pool = paramConfig->pool;
-    content_lst = linked_list_create(pool);
-    if ( !content_lst )
-        return ret;
+
     style_lst = linked_list_create(pool);
     if ( !style_lst )
         return ret;
@@ -1182,38 +1181,46 @@ int sc_core(ParamConfig *paramConfig, Buffer *html_page,
         return ret;
 
     /* 1. scan while HTML page */
-    ret = sc_core_page_scan(pool, html_page, content_lst, style_lst);
+    ret = sc_core_page_scan(pool, html_page, blockList, style_lst);
     if ( ret != 1 )
         return ret;
 
     /* 2. parse style list */
-    stylecount = sc_core_style_parse(paramConfig, html_page, content_lst, style_lst,
+    stylecount = sc_core_style_parse(paramConfig, html_page, blockList, style_lst,
             syncStyleList, asyncStyleList);
     if ( stylecount <= 0 )
         return stylecount;
 
     /* 3. split async style by domain */
-    ret = sc_core_split_asynclist_by_domain(pool,
-            asyncStyleList, (LinkedList ***)&async_list_domain);
-    if ( ret ) 
-        return ret;
+    if ( asyncStyleList->size ) {
+        ret = sc_core_split_asynclist_by_domain(pool,
+                asyncStyleList, (LinkedList **)async_list_domain);
+        if ( ret ) 
+            return ret;
+    }
 
     /* 4. combine style list */
     if ( DEBUG_OFF == paramConfig->debugMode ) {
-        /* async list combine */
-        ret = sc_core_combine_async_style(paramConfig,
-                (LinkedList ***)&async_list_domain, combinedStyleBuf);
-        if ( ret )
-            return ret;
+        if ( asyncStyleList->size ) {
+            /* async list combine */
+            ret = sc_core_combine_async_style(paramConfig,
+                    (LinkedList **)async_list_domain, combinedStyleBuf);
+            if ( ret )
+                return ret;
+        }
 
-        /* sync list combine */
-        ret = sc_core_combine_sync_style(paramConfig, syncStyleList, combinedStyleBuf);
-        if ( ret )
-            return ret;
+        if ( syncStyleList->size ) {
+            /* sync list combine */
+            ret = sc_core_combine_sync_style(paramConfig, syncStyleList, combinedStyleBuf);
+            if ( ret )
+                return ret;
+        }
 
     }else if ( DEBUG_STYLECOMBINE == paramConfig->debugMode ) {
-        sc_core_combine_style_debug(paramConfig, combinedStyleBuf,
-            async_list_domain, syncStyleList);
+        if ( syncStyleList->size ) {
+            sc_core_combine_style_debug(paramConfig, combinedStyleBuf,
+                async_list_domain, syncStyleList);
+        }
     }
 
     return stylecount;

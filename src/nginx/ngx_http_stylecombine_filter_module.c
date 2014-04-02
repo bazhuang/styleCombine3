@@ -520,10 +520,14 @@ ngx_http_stylecombine_read(ngx_http_request_t *r, ngx_chain_t *in)
         }
 
         if (ctx->page == NULL) {
+#ifndef __SC_NEW_VERSION
             /*
              * FIXME: we add 100 to solve the page tail has error words issue 
              */ 
             ctx->page = ngx_pcalloc(r->pool, ctx->page_size + 100);
+#else
+            ctx->page = ngx_palloc(r->pool, ctx->page_size);
+#endif
             if (ctx->page == NULL) {
                 return NGX_ERROR;
             }
@@ -557,10 +561,14 @@ ngx_http_stylecombine_read(ngx_http_request_t *r, ngx_chain_t *in)
         /* read from local */
 
         if (ctx->page == NULL) {
+#ifndef __SC_NEW_VERSION
             /* 
              * FIXME: we add 100 to solve the page tail has error words issue
              */
             ctx->page = ngx_pcalloc(r->pool, ctx->page_size + 100);
+#else
+            ctx->page = ngx_palloc(r->pool, ctx->page_size);
+#endif
             if (ctx->page == NULL) {
                 return NGX_ERROR;
             }
