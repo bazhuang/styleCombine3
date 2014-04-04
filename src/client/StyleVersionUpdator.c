@@ -257,6 +257,10 @@ static int parseLockUrl(apr_pool_t *pool, char *lockURL, style_updator_config *c
 
     //get app name
     char *appName = strstr(lockURL, "=");
+	
+	if (NULL == appName) {
+        appName = "=FALSE";
+    }
 
     strcat(param, "/GetAppState?appkey");
     strcat(param, appName);
