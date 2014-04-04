@@ -183,9 +183,7 @@ void combineStylesAsync(ParamConfig *paramConfig, StyleList *styleList, Buffer *
 
 		for(count = 0; NULL != node; count++) {
 			styleField = (StyleField *) node->value;
-            if (styleField->amd) {
-                styleField->styleUri = styleField->amdVersion;
-            }
+
 			if(count) {
 				string_append(pool, paramConfig->tmpUriBuf, URI_SEPARATOR_WITH_LEN);
 			}
