@@ -257,6 +257,10 @@ static int parseLockUrl(apr_pool_t *pool, char *lockURL, style_updator_config *c
 
     //get app name
     char *appName = strstr(lockURL, "=");
+	
+	if (NULL == appName) {
+        appName = "=FALSE";
+    }
 
     strcat(param, "/GetAppState?appkey");
     strcat(param, appName);
@@ -666,7 +670,7 @@ static int create_socket_server(apr_pool_t *pool){
     }
     serverAddress.sun_family  = AF_UNIX;
     strcpy(serverAddress.sun_path, SC_SOCKET_FILE_NAME);
-    omask = umask(0077);
+    omask = umask(0111);
 
     rc = bind(serverSocketFd, (struct sockaddr *) &serverAddress, sizeof(serverAddress));
     umask(omask);
