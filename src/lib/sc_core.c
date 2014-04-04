@@ -1146,7 +1146,7 @@ sc_core_combine_style_debug(ParamConfig *paramConfig, Buffer *combinedStyleBuf[3
 /* sc_core scan whole HTML page then returns content block list and combined style buffer.
  *
  * Input: paramConfig  (global variables like memory pool, debug mode etc)
- *        sourceCnt (sourceCnt->ptr pointer to whole HTML page)
+ *        html_page (html_page->ptr pointer to whole HTML page)
  *        combinedStyleBuf[3] (combined styles are saved in)
  *        blockList (content block list)
  * 
