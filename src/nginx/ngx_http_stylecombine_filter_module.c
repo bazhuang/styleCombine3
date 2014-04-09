@@ -407,9 +407,10 @@ ngx_http_stylecombine_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
     switch (ctx->phase) {
 
     case NGX_HTTP_STYLECOMBINE_START:
-        if ( NGX_HTTP_STYLECOMBINE_NONE == 
-                ngx_http_stylecombine_test(r, in)) {
-                return ngx_http_next_body_filter(r, in);
+        if ( NGX_HTTP_STYLECOMBINE_NONE == ngx_http_stylecombine_test(r, in)) {
+			if ( ctx->saved_page_size > 0 )
+				r->headers_out.content_length_n = ctx->saved_page_size;
+			return ngx_http_next_body_filter(r, in);
         }
 
         ctx->phase = NGX_HTTP_STYLECOMBINE_READ;
