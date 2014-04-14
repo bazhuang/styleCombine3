@@ -235,7 +235,7 @@ static char *ngx_http_stylecombine_merge_conf(ngx_conf_t *cf,void *parent, void 
         if (NULL == sc_conf->oldDomains[i])
             return NGX_CONF_ERROR;
 
-        SC_PATH_SLASH(sc_conf->oldDomains[i]);
+        SC_PATH_SLASH(cf->pool, sc_conf->oldDomains[i]);
     }
 
     saved_count = i;
@@ -249,7 +249,7 @@ static char *ngx_http_stylecombine_merge_conf(ngx_conf_t *cf,void *parent, void 
         if ( NULL == sc_conf->newDomains[i] )
             return NGX_CONF_ERROR;
 
-        SC_PATH_SLASH(sc_conf->newDomains[i]);
+        SC_PATH_SLASH(cf->pool, sc_conf->newDomains[i]);
     }
 
     /* old domains count should equal to new domains count */

@@ -517,8 +517,8 @@ static apr_status_t styleCombine_post_conf(sc_pool_t *p, sc_pool_t *plog, sc_poo
 		if(NULL == pConfig->newDomains[i] && NULL == pConfig->oldDomains[i]) {
 			continue;
 		}
-		SC_PATH_SLASH(pConfig->newDomains[i]);
-		SC_PATH_SLASH(pConfig->oldDomains[i]);
+		SC_PATH_SLASH(p, pConfig->newDomains[i]);
+		SC_PATH_SLASH(p, pConfig->oldDomains[i]);
 		if(pConfig->newDomains[i] && pConfig->oldDomains[i]) {
 			++domainCount;
 			continue;

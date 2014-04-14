@@ -36,12 +36,13 @@ typedef struct {
 	} \
 }
 
-#define SC_PATH_SLASH(pathBuf) { \
-	if(NULL != pathBuf && '/' != pathBuf->ptr[pathBuf->used - 1]) { \
-		pathBuf->ptr[pathBuf->used++] = '/'; \
-		pathBuf->ptr[pathBuf->used] = '\0'; \
-	} \
-}
+#define SC_PATH_SLASH(pool, pathBuf) \
+	do { \
+		if(NULL != (pathBuf) && NULL != (pool) && \
+				'/' != (pathBuf)->ptr[(pathBuf)->used - 1]) { \
+			string_append((pool), (pathBuf), "/", 1); \
+		} \
+	} while (0)
 
 #define SC_STRING_APPEND_BUFFER(pool, buf, tbuf) string_append(pool, buf, tbuf->ptr, tbuf->used)
 
