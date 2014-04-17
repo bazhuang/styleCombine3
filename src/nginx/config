@@ -1,17 +1,22 @@
+ngx_addon_name=ngx_http_stylecombine_filter_module
+HTTP_AUX_FILTER_MODULES="$HTTP_AUX_FILTER_MODULES ngx_http_stylecombine_filter_module"
+PROCS_MODULES="$PROCS_MODULES ngx_proc_styleupdator_module"
+
 ngx_stylecombine_deps="$ngx_addon_dir/stylecombine_ngx_module.h $ngx_addon_dir/../lib/sc_buffer.h \
             $ngx_addon_dir/../lib/sc_combine.h $ngx_addon_dir/../lib/sc_common.h $ngx_addon_dir/../lib/sc_config.h \
             $ngx_addon_dir/../lib/sc_conjoin.h $ngx_addon_dir/../lib/sc_hash.h $ngx_addon_dir/../lib/sc_html_parser.h \
             $ngx_addon_dir/../lib/sc_linked_list.h $ngx_addon_dir/../lib/sc_log.h $ngx_addon_dir/../lib/sc_mod_filter.h \
             $ngx_addon_dir/../lib/sc_socket.h $ngx_addon_dir/../lib/sc_string.h $ngx_addon_dir/../lib/sc_version.h \
-            $ngx_addon_dir/../lib/sc_core.h"
+            $ngx_addon_dir/../lib/sc_core.h \
+			$ngx_addon_dir/../client/style_updator.h"
 ngx_stylecombine_src="$ngx_addon_dir/ngx_http_stylecombine_filter_module.c $ngx_addon_dir/stylecombine_ngx_module.c \
             $ngx_addon_dir/../lib/sc_buffer.c $ngx_addon_dir/../lib/sc_combine.c $ngx_addon_dir/../lib/sc_config.c \
             $ngx_addon_dir/../lib/sc_conjoin.c $ngx_addon_dir/../lib/sc_hash.c $ngx_addon_dir/../lib/sc_html_parser.c \
             $ngx_addon_dir/../lib/sc_linked_list.c $ngx_addon_dir/../lib/sc_log.c $ngx_addon_dir/../lib/sc_mod_filter.c \
             $ngx_addon_dir/../lib/sc_socket.c $ngx_addon_dir/../lib/sc_string.c $ngx_addon_dir/../lib/sc_version.c \
-            $ngx_addon_dir/../lib/sc_core.c"
-ngx_addon_name=ngx_http_stylecombine_filter_module
-HTTP_AUX_FILTER_MODULES="$HTTP_AUX_FILTER_MODULES ngx_http_stylecombine_filter_module"
+            $ngx_addon_dir/../lib/sc_core.c \
+			$ngx_addon_dir/../client/style_updator.c $ngx_addon_dir/../client/ngx_procs_styleupdator_module.c"
+
 NGX_ADDON_DEPS="$NGX_ADDON_DEPS $ngx_stylecombine_deps"
 NGX_ADDON_SRCS="$NGX_ADDON_SRCS $ngx_stylecombine_src"
 CFLAGS="$CFLAGS -DSC_NGINX_PLATFORM -D__SC_NEW_VERSION -I$ngx_addon_dir/../lib/"

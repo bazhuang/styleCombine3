@@ -33,11 +33,13 @@ CFLAGS_PLATFORM=-DSC_HTTPD_PLATFORM
 LIB=../lib
 INCLUDES=$(shell $(APR) --includes) -I. -I${LIB}
 
-StyleVersionUpdator: sc_conjoin.o sc_string.o sc_buffer.o sc_socket.o 
+StyleVersionUpdator: sc_conjoin.o sc_string.o sc_buffer.o sc_socket.o sc_hash.o style_updator.o
 	${CC} -Wall StyleVersionUpdator.c -o $@ -g $^ $(CFLAGS_APR) $(CFLAGS_APU) \
 		$(CFLAGS_PLATFORM) ${INCLUDES} 
 
 StyleVersionUpdator.o: StyleVersionUpdator.c
+	${CC} -c $< ${INCLUDES} $(CFLAGS_APR) $(CFLAGS_PLATFORM)
+style_updator.o: style_updator.c
 	${CC} -c $< ${INCLUDES} $(CFLAGS_APR) $(CFLAGS_PLATFORM)
 
 sc_buffer.o: ${LIB}/sc_buffer.c
@@ -47,6 +49,8 @@ sc_string.o: ${LIB}/sc_string.c
 sc_socket.o: ${LIB}/sc_socket.c
 	${CC} -c $< ${INCLUDES} $(CFLAGS_APR) $(CFLAGS_PLATFORM)
 sc_conjoin.o:${LIB}/sc_conjoin.c
+	${CC} -c $< ${INCLUDES} $(CFLAGS_APR) $(CFLAGS_PLATFORM)
+sc_hash.o:${LIB}/sc_hash.c
 	${CC} -c $< ${INCLUDES} $(CFLAGS_APR) $(CFLAGS_PLATFORM)
 
 clean:
