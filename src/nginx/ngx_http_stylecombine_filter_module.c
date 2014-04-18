@@ -675,18 +675,6 @@ ngx_http_stylecombine_combine_style(ngx_http_request_t *r, ngx_buf_t *b,
             size = (offsetLen < rest) ? offsetLen : rest;
             b->last = ngx_cpymem(b->last, ctx->page + block->bIndex, size);
 		}
-#else
-        else if ( block->bIndex >= 0 && block->eIndex > block->bIndex ) {
-			offsetLen = block->eIndex - block->bIndex;
-            rest = totalLen - (b->last - b->pos);
-            size = (offsetLen < rest) ? offsetLen : rest;
-            b->last = ngx_cpymem(b->last, ctx->page + block->bIndex, size);
-		} else {
-            /* should not come to here */
-            continue;
-        }
-#endif
-
 		Buffer *combinedUriBuf = NULL;
 		switch(block->tagNameEnum) {
 		case SC_BHEAD:
@@ -710,6 +698,78 @@ ngx_http_stylecombine_combine_style(ngx_http_request_t *r, ngx_buf_t *b,
             size = (combinedUriBuf->used < rest) ? combinedUriBuf->used : rest;
             b->last = ngx_cpymem(b->last, combinedUriBuf->ptr, size);
 		}
+#else
+		Buffer *combinedUriBuf = NULL;
+
+		/* NOTE: copy order DOES matter!!! */
+		switch(block->tagNameEnum) {
+		case SC_BHEAD:
+			if ( block->bIndex >= 0 && block->eIndex > block->bIndex ) {
+				offsetLen = block->eIndex - block->bIndex;
+				rest = totalLen - (b->last - b->pos);
+				size = (offsetLen < rest) ? offsetLen : rest;
+				b->last = ngx_cpymem(b->last, ctx->page + block->bIndex, size);
+			} else {
+				/* should not come to here */
+				continue;
+			}
+			combinedUriBuf = combinedStyleBuf[SC_TOP];
+			combinedStyleBuf[SC_TOP] = NULL;
+			if(NULL != combinedUriBuf) {
+				rest = totalLen - (b->last - b->pos);
+				size = (combinedUriBuf->used < rest) ? combinedUriBuf->used : rest;
+				b->last = ngx_cpymem(b->last, combinedUriBuf->ptr, size);
+			}
+			break;
+		case SC_EHEAD:
+			combinedUriBuf = combinedStyleBuf[SC_HEAD];
+			combinedStyleBuf[SC_HEAD] = NULL;
+			if(NULL != combinedUriBuf) {
+				rest = totalLen - (b->last - b->pos);
+				size = (combinedUriBuf->used < rest) ? combinedUriBuf->used : rest;
+				b->last = ngx_cpymem(b->last, combinedUriBuf->ptr, size);
+			}
+			if ( block->bIndex >= 0 && block->eIndex > block->bIndex ) {
+				offsetLen = block->eIndex - block->bIndex;
+				rest = totalLen - (b->last - b->pos);
+				size = (offsetLen < rest) ? offsetLen : rest;
+				b->last = ngx_cpymem(b->last, ctx->page + block->bIndex, size);
+			} else {
+				/* should not come to here */
+				continue;
+			}
+			break;
+		case SC_EBODY:
+			combinedUriBuf = combinedStyleBuf[SC_FOOTER];
+			combinedStyleBuf[SC_FOOTER] = NULL;
+			if(NULL != combinedUriBuf) {
+				rest = totalLen - (b->last - b->pos);
+				size = (combinedUriBuf->used < rest) ? combinedUriBuf->used : rest;
+				b->last = ngx_cpymem(b->last, combinedUriBuf->ptr, size);
+			}
+			if ( block->bIndex >= 0 && block->eIndex > block->bIndex ) {
+				offsetLen = block->eIndex - block->bIndex;
+				rest = totalLen - (b->last - b->pos);
+				size = (offsetLen < rest) ? offsetLen : rest;
+				b->last = ngx_cpymem(b->last, ctx->page + block->bIndex, size);
+			} else {
+				/* should not come to here */
+				continue;
+			}
+			break;
+		default:
+			if ( block->bIndex >= 0 && block->eIndex > block->bIndex ) {
+				offsetLen = block->eIndex - block->bIndex;
+				rest = totalLen - (b->last - b->pos);
+				size = (offsetLen < rest) ? offsetLen : rest;
+				b->last = ngx_cpymem(b->last, ctx->page + block->bIndex, size);
+			} else {
+				/* should not come to here */
+				continue;
+			}
+			break;
+		}
+#endif
 	}
 }
 

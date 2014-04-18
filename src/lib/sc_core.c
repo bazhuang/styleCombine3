@@ -13,22 +13,22 @@
 #include "sc_core.h"
 
 #define INIT_TAG_CONFIG(tagConfig, stylefield, newDomain, haveNewLine) \
-do {\
-    tagConfig->styleField   = stylefield; \
-    tagConfig->domain       = newDomain; \
-    tagConfig->isNewLine    = haveNewLine; \
-    tagConfig->styleCount   = 0; \
-}while(0)
+	do {\
+		tagConfig->styleField   = stylefield; \
+		tagConfig->domain       = newDomain; \
+		tagConfig->isNewLine    = haveNewLine; \
+		tagConfig->styleCount   = 0; \
+	}while(0)
 
 #define FIELD_PARSE(p, ret, symbl) \
-do{\
-    while(isspace(*p)){ ++p; }\
-    if('=' == *p++) {\
-        while(isspace(*p)){ ++p; }\
-        if('"' == *p || '\'' == *p) { ++p; symbl = 1;} \
-        while(isspace(*p)){ ++p; }\
-    } else { ret = -1; } \
-}while(0)
+	do{\
+		while(isspace(*p)){ ++p; }\
+		if('=' == *p++) {\
+			while(isspace(*p)){ ++p; }\
+			if('"' == *p || '\'' == *p) { ++p; symbl = 1;} \
+			while(isspace(*p)){ ++p; }\
+		} else { ret = -1; } \
+	}while(0)
 
 #define NEXT_CHARS(istr, eIndex, offset) { istr += offset, eIndex += offset; }
 #define NEXT_CHAR(istr, eIndex) { istr++, eIndex++; }
@@ -41,18 +41,18 @@ do{\
 #undef strncmp
 #endif
 #define STR_TO_POSITION(str, position, posLen) \
-do{ \
-    (posLen) = 0; (position) = SC_NONE; \
-    if(NULL != (str)) { \
-        if (0 == strncmp((str), POSITION_TOP_WITH_LEN)) { \
-            (posLen) = 3; (position) = SC_TOP; \
-        }else if (0 == strncmp((str), POSITION_HEAD_WITH_LEN)) { \
-            (posLen) = 4; (position) = SC_HEAD; \
-        } else if (0 == strncmp((str), POSITION_FOOTER_WITH_LEN)) { \
-            (posLen) = 6; (position) = SC_FOOTER; \
-        } \
-    } \
-}while (0)
+	do{ \
+		(posLen) = 0; (position) = SC_NONE; \
+		if(NULL != (str)) { \
+			if (0 == strncmp((str), POSITION_TOP_WITH_LEN)) { \
+				(posLen) = 3; (position) = SC_TOP; \
+			}else if (0 == strncmp((str), POSITION_HEAD_WITH_LEN)) { \
+				(posLen) = 4; (position) = SC_HEAD; \
+			} else if (0 == strncmp((str), POSITION_FOOTER_WITH_LEN)) { \
+				(posLen) = 6; (position) = SC_FOOTER; \
+			} \
+		} \
+	}while (0)
 
 #define SC_HTML_HEAD    "<head>"
 #define SC_HTML_EHEAD   "</head>"
@@ -64,14 +64,14 @@ do{ \
 #define SC_HTML_TAG_LEN(tag) (sizeof(tag) - 1)
 
 typedef struct html_tag_flag_t {
-    unsigned int pad:1;
-    unsigned int head:1;
-    unsigned int ehead:1;
-    unsigned int link:1;
-    unsigned int script:1;
-    unsigned int textarea:1;
-    unsigned int comment:1;
-    unsigned int ebody:1;
+	unsigned int pad:1;
+	unsigned int head:1;
+	unsigned int ehead:1;
+	unsigned int link:1;
+	unsigned int script:1;
+	unsigned int textarea:1;
+	unsigned int comment:1;
+	unsigned int ebody:1;
 }html_tag_flag;
 
 static StyleField *style_field_create(sc_pool_t  *pool) {
@@ -80,10 +80,10 @@ static StyleField *style_field_create(sc_pool_t  *pool) {
 		return NULL;
 	}
 	styleField->async       = 0;
-    styleField->amd         = 0;
+	styleField->amd         = 0;
 	styleField->styleUri    = NULL;
 	styleField->version     = NULL;
-    styleField->amdVersion  = NULL;
+	styleField->amdVersion  = NULL;
 	styleField->position    = SC_NONE;
 	styleField->styleType   = SC_TYPE_CSS;
 	styleField->domainIndex = 0;
@@ -98,17 +98,17 @@ static int getFieldValueLen(char *str, short symbl) {
 	register int valueLen = 0, stop = 0;
 	while(*str) {
 		switch(*str) {
-		case '\'':
-		case '"':
-			stop = 1;
-			break;
-		case ' ':
-			//如果是以单双引号开始和结束的，中间可以有空格；否则以空格为结束
-			if(1 == symbl) {
+			case '\'':
+			case '"':
+				stop = 1;
 				break;
-			}
-			stop = 1;
-			break;
+			case ' ':
+				//如果是以单双引号开始和结束的，中间可以有空格；否则以空格为结束
+				if(1 == symbl) {
+					break;
+				}
+				stop = 1;
+				break;
 		}
 		if(stop) {
 			break;
@@ -127,62 +127,62 @@ static int getFieldValueLen(char *str, short symbl) {
  * 非异步为：域名下标+URI
  * 异步为：域名下标+URI+组名
  */
-static short
+	static short
 isRepeat(sc_pool_t *pool, sc_hash_t *duplicates, StyleField *styleField)
 {
-    if(NULL == duplicates) {
-        return 0;
-    }
-    int len = styleField->styleUri->used;
-    //make a key
-    Buffer *key = buffer_init_size(pool, len + 26);
-    if(NULL == key) {
-        return 0;
-    }
-    //add domain area
-    key->ptr[key->used++] = '0' + styleField->domainIndex;
-    string_append(pool, key, styleField->styleUri->ptr, styleField->styleUri->used);
-    if(NULL != sc_hash_get(duplicates, key->ptr, key->used)) {
-        //if uri has exsit then skiping it
-        return 1;
-    }
-    if(styleField->async) {
-        //add group area
-        string_append(pool, key, styleField->group->ptr, styleField->group->used);
-        if(NULL != sc_hash_get(duplicates, key->ptr, key->used)) {
-            //if uri has exsit then skiping it
-            return 1;
-        }
-    }
-    sc_hash_set(duplicates, key->ptr, key->used, "1");
-    return 0;
+	if(NULL == duplicates) {
+		return 0;
+	}
+	int len = styleField->styleUri->used;
+	//make a key
+	Buffer *key = buffer_init_size(pool, len + 26);
+	if(NULL == key) {
+		return 0;
+	}
+	//add domain area
+	key->ptr[key->used++] = '0' + styleField->domainIndex;
+	string_append(pool, key, styleField->styleUri->ptr, styleField->styleUri->used);
+	if(NULL != sc_hash_get(duplicates, key->ptr, key->used)) {
+		//if uri has exsit then skiping it
+		return 1;
+	}
+	if(styleField->async) {
+		//add group area
+		string_append(pool, key, styleField->group->ptr, styleField->group->used);
+		if(NULL != sc_hash_get(duplicates, key->ptr, key->used)) {
+			//if uri has exsit then skiping it
+			return 1;
+		}
+	}
+	sc_hash_set(duplicates, key->ptr, key->used, "1");
+	return 0;
 }
 
 static int
 parserTag(ParamConfig *paramConfig, StyleParserTag *ptag,
-        StyleField **pStyleField, char *input){
+		StyleField **pStyleField, char *input){
 
-    sc_pool_t   *pool = NULL;
-    Buffer  *maxUrlBuf = NULL;
-    char ch   = '0' , pchar = '0';
-    int count = 0; 
-    int ret = -1;
+	sc_pool_t   *pool = NULL;
+	Buffer  *maxUrlBuf = NULL;
+	char ch   = '0' , pchar = '0';
+	int count = 0; 
+	int ret = -1;
 
-    if ( !paramConfig ||
-            !ptag ||
-            !pStyleField ||
-            !input ) {
-        return ret;
-    }
+	if ( !paramConfig ||
+			!ptag ||
+			!pStyleField ||
+			!input ) {
+		return ret;
+	}
 
-    pool = paramConfig->pool;
-    CombineConfig *pConfig= paramConfig->pConfig;
+	pool = paramConfig->pool;
+	CombineConfig *pConfig= paramConfig->pConfig;
 
-    maxUrlBuf = paramConfig->maxUrlBuf;
-    if ( !maxUrlBuf )
-        maxUrlBuf = paramConfig->maxUrlBuf = buffer_init_size(pool, pConfig->maxUrlLen * 2);
-    else 
-        SC_BUFFER_CLEAN(maxUrlBuf);
+	maxUrlBuf = paramConfig->maxUrlBuf;
+	if ( !maxUrlBuf )
+		maxUrlBuf = paramConfig->maxUrlBuf = buffer_init_size(pool, pConfig->maxUrlLen * 2);
+	else 
+		SC_BUFFER_CLEAN(maxUrlBuf);
 
 	NEXT_CHARS(input, count, ptag->prefix->used - 1);
 
@@ -254,17 +254,17 @@ parserTag(ParamConfig *paramConfig, StyleParserTag *ptag,
 	while(*currURI) {
 		ch = *(currURI++);
 		switch(ch) {
-		case '"':
-		case '\'':
-		case '?':
-		case ' ': //考虑 一些URL没有或忘记 以 单双引号结束的。浏览器是可以兼容这种错误的。
-		case '>': //考虑 一些URL没被引号包起的，而且直接‘>’结束的。如：<script src=http://domain/app/a.js></script>
-			//清除uri后面带的参数
-			stop = 1;
-			break;
-		case '.':
-			hasDot = 1;
-			break;
+			case '"':
+			case '\'':
+			case '?':
+			case ' ': //考虑 一些URL没有或忘记 以 单双引号结束的。浏览器是可以兼容这种错误的。
+			case '>': //考虑 一些URL没被引号包起的，而且直接‘>’结束的。如：<script src=http://domain/app/a.js></script>
+				//清除uri后面带的参数
+				stop = 1;
+				break;
+			case '.':
+				hasDot = 1;
+				break;
 		}
 		if(stop) {
 			break;
@@ -324,70 +324,70 @@ parserTag(ParamConfig *paramConfig, StyleParserTag *ptag,
 		}
 		tagBufPtr         += fieldPrefixLen;
 		switch(*tagBufPtr) {
-		case 'p': //data-sc-pos
-			if(0 == compare(tagBufPtr, "pos", 3, 0)) {
-				tagBufPtr   += 3;
-				retValue     = 0;
-				hasSymble    = 0;
-				FIELD_PARSE(tagBufPtr, retValue, hasSymble);
-				if(retValue == -1) {
+			case 'p': //data-sc-pos
+				if(0 == compare(tagBufPtr, "pos", 3, 0)) {
+					tagBufPtr   += 3;
+					retValue     = 0;
+					hasSymble    = 0;
+					FIELD_PARSE(tagBufPtr, retValue, hasSymble);
+					if(retValue == -1) {
+						continue;
+					}
+					int posLen = 0;
+					STR_TO_POSITION(tagBufPtr, position, posLen);
+					tagBufPtr  += posLen + hasSymble;
 					continue;
 				}
-				int posLen = 0;
-				STR_TO_POSITION(tagBufPtr, position, posLen);
-				tagBufPtr  += posLen + hasSymble;
-				continue;
-			}
-			break;
-		case 'a': //data-sc-async or data-sc-amd
-			if(0 == compare(tagBufPtr, "async", 5, 0)) {
-				tagBufPtr   += 5;
-				retValue     = 0;
-				hasSymble    = 0;
-				FIELD_PARSE(tagBufPtr, retValue, hasSymble);
-				if(retValue == -1) {
+				break;
+			case 'a': //data-sc-async or data-sc-amd
+				if(0 == compare(tagBufPtr, "async", 5, 0)) {
+					tagBufPtr   += 5;
+					retValue     = 0;
+					hasSymble    = 0;
+					FIELD_PARSE(tagBufPtr, retValue, hasSymble);
+					if(retValue == -1) {
+						continue;
+					}
+					if(0 == memcmp(tagBufPtr, "true", 4)) {
+						styleField->async = 1;
+						tagBufPtr        += 4 + hasSymble;
+						continue;
+					}
+				}
+				if(0 == compare(tagBufPtr, "amd", 3, 0)) {
+					tagBufPtr   += 3;
+					retValue     = 0, 
+								 hasSymble    = 0;
+					FIELD_PARSE(tagBufPtr, retValue, hasSymble);
+					if(retValue == -1) {
+						continue;
+					}
+					if(0 == memcmp(tagBufPtr, "true", 4)) {
+						styleField->amd = 1;
+						tagBufPtr += 4 + hasSymble;
+						continue;
+					}
+				}
+				break;
+			case 'g': //data-sc-group
+				if(0 == compare(tagBufPtr, "group", 5, 0)) {
+					tagBufPtr     += 5;
+					retValue       = 0;
+					hasSymble      = 0;
+					FIELD_PARSE(tagBufPtr, retValue, hasSymble);
+					if(retValue == -1) {
+						continue;
+					}
+					int valueLen    = getFieldValueLen(tagBufPtr, hasSymble);
+					if(valueLen > 0) {
+						group       = buffer_init_size(pool, valueLen + 8);
+						string_append(pool, group, tagBufPtr, valueLen);
+						tagBufPtr   += valueLen;
+						continue;
+					}
 					continue;
 				}
-				if(0 == memcmp(tagBufPtr, "true", 4)) {
-					styleField->async = 1;
-					tagBufPtr        += 4 + hasSymble;
-					continue;
-				}
-			}
-            if(0 == compare(tagBufPtr, "amd", 3, 0)) {
-                tagBufPtr   += 3;
-                retValue     = 0, 
-                hasSymble    = 0;
-                FIELD_PARSE(tagBufPtr, retValue, hasSymble);
-                if(retValue == -1) {
-                    continue;
-                }
-                if(0 == memcmp(tagBufPtr, "true", 4)) {
-                    styleField->amd = 1;
-                    tagBufPtr += 4 + hasSymble;
-                    continue;
-                }
-            }
-			break;
-		case 'g': //data-sc-group
-			if(0 == compare(tagBufPtr, "group", 5, 0)) {
-				tagBufPtr     += 5;
-				retValue       = 0;
-				hasSymble      = 0;
-				FIELD_PARSE(tagBufPtr, retValue, hasSymble);
-				if(retValue == -1) {
-					continue;
-				}
-				int valueLen    = getFieldValueLen(tagBufPtr, hasSymble);
-				if(valueLen > 0) {
-					group       = buffer_init_size(pool, valueLen + 8);
-					string_append(pool, group, tagBufPtr, valueLen);
-					tagBufPtr   += valueLen;
-					continue;
-				}
-				continue;
-			}
-			break;
+				break;
 		}
 	}
 	styleField->domainIndex = dIndex;
@@ -434,713 +434,729 @@ parserTag(ParamConfig *paramConfig, StyleParserTag *ptag,
  * dongming.jidm
  */
 static void parseDependecies(sc_pool_t *pool, GlobalVariable *globalVariable,
-                StyleField *styleField, LinkedList *listItem, char *url, sc_hash_t *duplicates)
+		StyleField *styleField, LinkedList *listItem, char *url, sc_hash_t *duplicates)
 {
 
-    char *amdVersion = sc_pstrdup(pool, styleField->amdVersion->ptr);
-    char **result = NULL;
-    char *sepreator = ",";
-    int i = 0;
-    int num = count_n(amdVersion, sepreator);
+	char *amdVersion = sc_pstrdup(pool, styleField->amdVersion->ptr);
+	char **result = NULL;
+	char *sepreator = ",";
+	int i = 0;
+	int num = count_n(amdVersion, sepreator);
 
-    //result = ( char ** ) malloc( sizeof(char*) * ( num +1));
-    result  = (char **) sc_palloc(pool, sizeof(char*) * ( num +1));
+	//result = ( char ** ) malloc( sizeof(char*) * ( num +1));
+	result  = (char **) sc_palloc(pool, sizeof(char*) * ( num +1));
 
-    int count = split_n(result, amdVersion, sepreator);
+	int count = split_n(result, amdVersion, sepreator);
 
-    for ( i = 0; i < count; i++) {
-        StyleField *styleFieldAmd = style_field_create(pool);
-        Buffer *dependBuf = buffer_init_size(pool, 1024);
+	for ( i = 0; i < count; i++) {
+		StyleField *styleFieldAmd = style_field_create(pool);
+		Buffer *dependBuf = buffer_init_size(pool, 1024);
 
-        char *restr = sc_pstrdup(pool, result[i]);
-        dependBuf->ptr = restr;
-        dependBuf->used = strlen(restr);
+		char *restr = sc_pstrdup(pool, result[i]);
+		dependBuf->ptr = restr;
+		dependBuf->used = strlen(restr);
 
-//        dependBuf->ptr = result[i];
-//        dependBuf->used = strlen(result[i]);
+		//        dependBuf->ptr = result[i];
+		//        dependBuf->used = strlen(result[i]);
 
-        styleFieldAmd->async = styleField->async;
-        styleFieldAmd->styleType = styleField->styleType;
-        styleFieldAmd->domainIndex = styleField->domainIndex;
-        styleFieldAmd->styleUri = dependBuf;
-        styleFieldAmd->group = styleField->group;
-        styleFieldAmd->media = styleField->media;
-        styleFieldAmd->version = get_string_version(pool, url, dependBuf, globalVariable);
-        styleFieldAmd->position = styleField->position;
+		styleFieldAmd->async = styleField->async;
+		styleFieldAmd->styleType = styleField->styleType;
+		styleFieldAmd->domainIndex = styleField->domainIndex;
+		styleFieldAmd->styleUri = dependBuf;
+		styleFieldAmd->group = styleField->group;
+		styleFieldAmd->media = styleField->media;
+		styleFieldAmd->version = get_string_version(pool, url, dependBuf, globalVariable);
+		styleFieldAmd->position = styleField->position;
 
-        //去重，但不包括最后一个入口文件
-        if(!styleField->async && isRepeat(pool, duplicates, styleFieldAmd) && i != (count - 1)) {
-            continue;
-        }
+		//去重，但不包括最后一个入口文件
+		if(!styleField->async && isRepeat(pool, duplicates, styleFieldAmd) && i != (count - 1)) {
+			continue;
+		}
 
-//        log_error("url is %s", styleFieldAmd->styleUri->ptr);
+		//        log_error("url is %s", styleFieldAmd->styleUri->ptr);
 
-        linked_list_add(pool, listItem, styleFieldAmd);
-    }
+		linked_list_add(pool, listItem, styleFieldAmd);
+	}
 
-    //free(result);
+	//free(result);
 }
 
-static ContentBlock *
+	static ContentBlock *
 content_block_create(sc_pool_t *pool, int bIndex, int eIndex, enum TagNameEnum tagNameEnum)
 {
-    if(eIndex <= bIndex) {
-        return NULL;
-    }
+	if(eIndex <= bIndex) {
+		return NULL;
+	}
 
-    ContentBlock *contentBlock = (ContentBlock *)sc_palloc(pool, sizeof(ContentBlock));
-    if(NULL == contentBlock) {
-        return NULL;
-    }
+	ContentBlock *contentBlock = (ContentBlock *)sc_palloc(pool, sizeof(ContentBlock));
+	if(NULL == contentBlock) {
+		return NULL;
+	}
 
-    contentBlock->bIndex = bIndex;
-    contentBlock->eIndex = eIndex;
-    contentBlock->cntBlock = NULL;
-    contentBlock->tagNameEnum = tagNameEnum;
+	contentBlock->bIndex = bIndex;
+	contentBlock->eIndex = eIndex;
+	contentBlock->cntBlock = NULL;
+	contentBlock->tagNameEnum = tagNameEnum;
 
-    return contentBlock;
+	return contentBlock;
 }
 
-static int
+	static int
 content_list_order_insert(sc_pool_t *pool, LinkedList *list, void *item)
 {
-    ListNode  *pre, *node = NULL;
-    ContentBlock    *insert_block, *block;
+	ListNode  *pre, *node = NULL;
+	ContentBlock    *insert_block, *block;
 
-    if ( !pool ||
-            !list ||
-            !item )
-        return -1;
+	if ( !pool ||
+			!list ||
+			!item )
+		return -1;
 
-    insert_block = (ContentBlock *)item;
-    block = NULL;
+	insert_block = (ContentBlock *)item;
+	block = NULL;
 
-    pre = NULL;
-    for ( node = list->first; node; node = node->next ) {
-        block = (ContentBlock *) node->value;
-        if ( block->bIndex < insert_block->bIndex ) {
-            pre = node;
-            continue;
-        } else 
-            break;
-    }
-               
-    if ( !pre ) {
-        node = (ListNode *) sc_palloc(pool, sizeof(ListNode));
-        if ( !node )
-            return -1;
-        
-        node->value = item;
-        node->next = list->first;
-        list->first = node;
+	pre = NULL;
+	for ( node = list->first; node; node = node->next ) {
+		block = (ContentBlock *) node->value;
+		if ( block->bIndex < insert_block->bIndex ) {
+			pre = node;
+			continue;
+		} else 
+			break;
+	}
 
-    } else {
-        node = (ListNode *) sc_palloc(pool, sizeof(ListNode));
-        if ( !node )
-            return -1;
+	if ( !pre ) {
+		node = (ListNode *) sc_palloc(pool, sizeof(ListNode));
+		if ( !node )
+			return -1;
 
-        node->value = item;
-        node->next = pre->next;
-        pre->next = node;
-        if ( !node->next )
-            list->head = node;
-    }
+		node->value = item;
+		node->next = list->first;
+		list->first = node;
 
-    list->size++;
-    return 0;
+	} else {
+		node = (ListNode *) sc_palloc(pool, sizeof(ListNode));
+		if ( !node )
+			return -1;
+
+		node->value = item;
+		node->next = pre->next;
+		pre->next = node;
+		if ( !node->next )
+			list->head = node;
+	}
+
+	list->size++;
+	return 0;
 }
 
 /* sc_core_page_scan scan whole html_page and then return content list and style_list */
-static int
+	static int
 sc_core_page_scan(sc_pool_t *pool, Buffer *html_page,
-        LinkedList *content_lst, LinkedList *style_lst)
+		LinkedList *content_lst, LinkedList *style_lst)
 {
-    html_tag_flag flag={0,0,0,0,0,0,0,0};
-    char *c, *tmp, *page;
-    unsigned int   rest;
-    ContentBlock *block = NULL;
-    //int block_begin, block_end;
-    size_t  block_begin, block_end;
-    int ret = -1;
+	html_tag_flag flag={0,0,0,0,0,0,0,0};
+	char *c, *tmp, *page;
+	unsigned int   rest;
+	ContentBlock *block = NULL;
+	//int block_begin, block_end;
+	size_t  block_begin, block_end;
+	int ret = -1;
 
-    if ( !pool || !html_page || !content_lst || !style_lst )
-        return ret;
-    
-    page = html_page->ptr;
-    if (!page || html_page->used <= 0)
-        return ret;
+	if ( !pool || !html_page || !content_lst || !style_lst )
+		return ret;
 
-    block_begin = block_end = 0;
-    c = page;
-    while ( *c ) {
-        while ( block_end < html_page->size && *c != '<') {
-            c++;
-            block_end++;
-        }
+	page = html_page->ptr;
+	if (!page || html_page->used <= 0)
+		return ret;
 
-        if ( block_end >= html_page->size )
-            break;
+	block_begin = block_end = 0;
+	c = page;
+	while ( *c ) {
+		while ( block_end < html_page->size && *c != '<') {
+			c++;
+			block_end++;
+		}
 
-        /*
-         * sc_core_scan only care follow HTML tags:
-         *
-         * <head>
-         * </head>
-         * <link
-         * <script
-         * <textarea
-         * <!--
-         * </body>
-         */
-        
-        /* Note: rest size should biger or equal than HTML tag (which we interested in) size.
-         * otherwise strncasecmp will trigger wrong memory access */
-        rest = (page + html_page->used) - c;
-        if ( rest >= SC_HTML_TAG_LEN(SC_HTML_HEAD) ) {
-            ret = strncasecmp(c, SC_HTML_HEAD, SC_HTML_TAG_LEN(SC_HTML_HEAD)); 
-            if ( ret == 0 ) {
-                /* <head> found */
-                if ( flag.head ) {
-                    /* Warning: duplicated <head>, just ignore it. */
-                    c += SC_HTML_TAG_LEN(SC_HTML_HEAD);
-                    block_end += SC_HTML_TAG_LEN(SC_HTML_HEAD);
-                    continue;
-                }
-                flag.head = 1;
-                c += SC_HTML_TAG_LEN(SC_HTML_HEAD);
-                block_end += SC_HTML_TAG_LEN(SC_HTML_HEAD);
-                block = content_block_create(pool, block_begin, block_end, SC_BHEAD);
-                if ( block ) {
-                    /* add to content list */
-                    linked_list_add(pool, content_lst, (void *)block);
-                    block_begin = block_end;
-                } else {
-                    /* content block create failed! */
-                    return -1;
-                }
-                continue;
-            }
-        }
+		if ( block_end >= html_page->size )
+			break;
 
-        if ( rest >= SC_HTML_TAG_LEN(SC_HTML_EHEAD) ) {
-            ret = strncasecmp(c, SC_HTML_EHEAD, SC_HTML_TAG_LEN(SC_HTML_EHEAD));
-            if ( ret == 0 ) {
-                /* </head> found */
-                if ( !flag.head ) {
-                    /* Warning: </head> found before <head> */
-                    return -1;
-                } else if ( flag.ehead ) {
-                    /* Warning: duplicated </head>, just ignore it. */
-                    c += SC_HTML_TAG_LEN(SC_HTML_EHEAD);
-                    block_end += SC_HTML_TAG_LEN(SC_HTML_EHEAD);
-                    continue;
-                }
-                flag.ehead = 1;
-                c += SC_HTML_TAG_LEN(SC_HTML_EHEAD);
-                block_end += SC_HTML_TAG_LEN(SC_HTML_EHEAD);
-                block = content_block_create(pool, block_begin, block_end, SC_EHEAD);
-                if ( block ) {
-                    /* add to content list */
-                    linked_list_add(pool, content_lst, (void *)block);
-                    block_begin = block_end;
-                } else {
-                    /* content block create failed! */
-                    return -1;
-                }
-                continue;
-            }
-        }
+		/*
+		 * sc_core_scan only care follow HTML tags:
+		 *
+		 * <head>
+		 * </head>
+		 * <link
+		 * <script
+		 * <textarea
+		 * <!--
+		 * </body>
+		 */
 
-        if ( rest >= SC_HTML_TAG_LEN(SC_HTML_LINK) ) {
-            ret = strncasecmp(c, SC_HTML_LINK, SC_HTML_TAG_LEN(SC_HTML_LINK));
-            if ( ret == 0 ) {
-                /* <link found */
-                if ( !flag.link )
-                    flag.link = 1;
+		/* Note: rest size should biger or equal than HTML tag (which we interested in) size.
+		 * otherwise strncasecmp will trigger wrong memory access */
+		rest = (page + html_page->used) - c;
+		if ( rest >= SC_HTML_TAG_LEN(SC_HTML_HEAD) ) {
+			ret = strncasecmp(c, SC_HTML_HEAD, SC_HTML_TAG_LEN(SC_HTML_HEAD)); 
+			if ( ret == 0 ) {
+				/* <head> found */
+				if ( flag.head ) {
+					/* Warning: duplicated <head>, just ignore it. */
+					c += SC_HTML_TAG_LEN(SC_HTML_HEAD);
+					block_end += SC_HTML_TAG_LEN(SC_HTML_HEAD);
+					continue;
+				}
+				flag.head = 1;
+				c += SC_HTML_TAG_LEN(SC_HTML_HEAD);
+				block_end += SC_HTML_TAG_LEN(SC_HTML_HEAD);
+				block = content_block_create(pool, block_begin, block_end, SC_BHEAD);
+				if ( block ) {
+					/* add to content list */
+					linked_list_add(pool, content_lst, (void *)block);
+					block_begin = block_end;
+				} else {
+					/* content block create failed! */
+					return -1;
+				}
+				continue;
+			}
+		}
 
-                /* save scanned content */
-                if ( block_end > block_begin ) {
-                    block = content_block_create(pool, block_begin, block_end, SC_TN_NONE);
-                    if ( block ) {
-                        linked_list_add(pool, content_lst, (void *)block);
-                        block_begin = block_end;
-                    }else {
-                        /* content block create failed! */
-                        return -1;
-                    }
-                }
-                /* find the end of <link */
-                tmp = strstr(c, ">");
-                if ( tmp ) {
-                    block_end += tmp - c + 1; /* 1 means size of ">" */
-                    c = tmp + 1; /* ditto */
-                    block = content_block_create(pool, block_begin, block_end, SC_LINK);
-                    if ( block ) {
-                        /* add to style list */
-                        linked_list_add(pool, style_lst, (void *)block);
-                        block_begin = block_end;
-                    } else {
-                        /* content block create failed! */
-                        return -1;
-                    }
-                } else {
-                    /* Warning: can not find "/>" to terminate "<link" */
-                    return -1;
-                }
-                continue;
-            }
-        }
+		if ( rest >= SC_HTML_TAG_LEN(SC_HTML_EHEAD) ) {
+			ret = strncasecmp(c, SC_HTML_EHEAD, SC_HTML_TAG_LEN(SC_HTML_EHEAD));
+			if ( ret == 0 ) {
+				/* </head> found */
+				if ( !flag.head ) {
+					/* Warning: </head> found before <head> */
+					return -1;
+				} else if ( flag.ehead ) {
+					/* Warning: duplicated </head>, just ignore it. */
+					c += SC_HTML_TAG_LEN(SC_HTML_EHEAD);
+					block_end += SC_HTML_TAG_LEN(SC_HTML_EHEAD);
+					continue;
+				}
+				flag.ehead = 1;
+				block = content_block_create(pool, block_begin, block_end, SC_TN_NONE);
+				if ( block ) {
+					linked_list_add(pool, content_lst, (void *)block);
+					block_begin = block_end;
+				}else {
+					/* content block create failed! */
+					return -1;
+				}
+				c += SC_HTML_TAG_LEN(SC_HTML_EHEAD);
+				block_end += SC_HTML_TAG_LEN(SC_HTML_EHEAD);
+				block = content_block_create(pool, block_begin, block_end, SC_EHEAD);
+				if ( block ) {
+					/* add to content list */
+					linked_list_add(pool, content_lst, (void *)block);
+					block_begin = block_end;
+				} else {
+					/* content block create failed! */
+					return -1;
+				}
+				continue;
+			}
+		}
 
-        if ( rest >= SC_HTML_TAG_LEN(SC_HTML_SCRIPT) ) {
-            ret = strncasecmp(c, SC_HTML_SCRIPT, SC_HTML_TAG_LEN(SC_HTML_SCRIPT));
-            if ( ret == 0 ) {
-                /* <script found */
-                if ( !flag.script ) {
-                    flag.script = 1;
-                }
+		if ( rest >= SC_HTML_TAG_LEN(SC_HTML_LINK) ) {
+			ret = strncasecmp(c, SC_HTML_LINK, SC_HTML_TAG_LEN(SC_HTML_LINK));
+			if ( ret == 0 ) {
+				/* <link found */
+				if ( !flag.link )
+					flag.link = 1;
 
-                /* save scanned content */
-                if ( block_end > block_begin ) {
-                    block = content_block_create(pool, block_begin, block_end, SC_TN_NONE);
-                    if ( block ) {
-                        linked_list_add(pool, content_lst, (void *)block);
-                        block_begin = block_end;
-                    }else {
-                        /* content block create failed! */
-                        return -1;
-                    }
-                }
+				/* save scanned content */
+				if ( block_end > block_begin ) {
+					block = content_block_create(pool, block_begin, block_end, SC_TN_NONE);
+					if ( block ) {
+						linked_list_add(pool, content_lst, (void *)block);
+						block_begin = block_end;
+					}else {
+						/* content block create failed! */
+						return -1;
+					}
+				}
+				/* find the end of <link */
+				tmp = strstr(c, ">");
+				if ( tmp ) {
+					block_end += tmp - c + 1; /* 1 means size of ">" */
+					c = tmp + 1; /* ditto */
+					block = content_block_create(pool, block_begin, block_end, SC_LINK);
+					if ( block ) {
+						/* add to style list */
+						linked_list_add(pool, style_lst, (void *)block);
+						block_begin = block_end;
+					} else {
+						/* content block create failed! */
+						return -1;
+					}
+				} else {
+					/* Warning: can not find "/>" to terminate "<link" */
+					return -1;
+				}
+				continue;
+			}
+		}
 
-                /* find the end of <script */
-                tmp = strcasestr(c, "</script>");
-                if ( !tmp ) {
-                    return -1;
-                }
-                block_end += tmp + SC_HTML_TAG_LEN("</script>") - c;
-                c = tmp + SC_HTML_TAG_LEN("</script>");
-                block = content_block_create(pool, block_begin, block_end, SC_SCRIPT);
-                if ( block ) {
-                    /* add to style list */
-                    linked_list_add(pool, style_lst, (void *)block);
-                    block_begin = block_end;
-                } else {
-                    /* can not create content block */
-                    return -1;
-                }
-                continue;
-            }
-        }
-        
-        if ( rest >= SC_HTML_TAG_LEN(SC_HTML_TEXTAREA) ) {
-            ret = strncasecmp(c, SC_HTML_TEXTAREA, SC_HTML_TAG_LEN(SC_HTML_TEXTAREA));
-            if ( ret == 0 ) {
-                /* </textarea found  */
-                if ( !flag.textarea )
-                    flag.textarea = 1;
+		if ( rest >= SC_HTML_TAG_LEN(SC_HTML_SCRIPT) ) {
+			ret = strncasecmp(c, SC_HTML_SCRIPT, SC_HTML_TAG_LEN(SC_HTML_SCRIPT));
+			if ( ret == 0 ) {
+				/* <script found */
+				if ( !flag.script ) {
+					flag.script = 1;
+				}
 
-                /* </textarea will not add to content list alone, just skip 
-                 * the while tag */
-                tmp = strcasestr(c, "</textarea>");
-                if ( !tmp ) {
-                    /* Warning: can not find </textarea> to terminate <textarea */
-                    return -1;
-                }
-                block_end += tmp + SC_HTML_TAG_LEN("</textarea>") - c;
-                c = tmp + SC_HTML_TAG_LEN("</textarea>");
-                continue;
-            }
-        }
-                
-        if ( rest >= SC_HTML_TAG_LEN(SC_HTML_COMMENT) ) {
-            ret = strncmp(c, SC_HTML_COMMENT, SC_HTML_TAG_LEN(SC_HTML_COMMENT));
-            if ( ret == 0) {
-                /* <!-- found */
-                if ( !flag.comment )
-                    flag.comment = 1;
+				/* save scanned content */
+				if ( block_end > block_begin ) {
+					block = content_block_create(pool, block_begin, block_end, SC_TN_NONE);
+					if ( block ) {
+						linked_list_add(pool, content_lst, (void *)block);
+						block_begin = block_end;
+					}else {
+						/* content block create failed! */
+						return -1;
+					}
+				}
 
-                /* <!-- --> will not add to content list alone, just skip
-                 * the while tag */
-                tmp = strstr(c, "-->");
-                if ( !tmp ) {
-                    /* Warning: can not find --> to terminate <!-- */
-                    return -1;
-                }
-                /* TODO: support IE */
-                block_end += tmp + SC_HTML_TAG_LEN("-->") - c;
-                c = tmp + SC_HTML_TAG_LEN("-->");
-                continue;
-            }
-        }
+				/* find the end of <script */
+				tmp = strcasestr(c, "</script>");
+				if ( !tmp ) {
+					return -1;
+				}
+				block_end += tmp + SC_HTML_TAG_LEN("</script>") - c;
+				c = tmp + SC_HTML_TAG_LEN("</script>");
+				block = content_block_create(pool, block_begin, block_end, SC_SCRIPT);
+				if ( block ) {
+					/* add to style list */
+					linked_list_add(pool, style_lst, (void *)block);
+					block_begin = block_end;
+				} else {
+					/* can not create content block */
+					return -1;
+				}
+				continue;
+			}
+		}
 
-        if ( rest >= SC_HTML_TAG_LEN(SC_HTML_EBODY) ) {
-            ret = strncasecmp(c, SC_HTML_EBODY, SC_HTML_TAG_LEN(SC_HTML_EBODY));
-            if ( ret == 0 ) {
-                /* </body> found */
-                if ( flag.ebody ) {
-                    /* Warning: duplicated </body> found, just ignore it */
-                    c += SC_HTML_TAG_LEN(SC_HTML_EBODY);
-                    block_end += SC_HTML_TAG_LEN(SC_HTML_EBODY);
-                    continue;
-                }
-                flag.ebody = 1;
-                c += SC_HTML_TAG_LEN(SC_HTML_EBODY);
-                block_end += SC_HTML_TAG_LEN(SC_HTML_EBODY);
-                block = content_block_create(pool, block_begin, block_end, SC_EBODY);
-                if ( block ) {
-                    /* add to content list */
-                    linked_list_add(pool, content_lst, (void *) block);
-                    block_begin = block_end;
-                } else {
-                    /* content block create failed! */
-                    return -1;
-                }
-            }
-        }
-        c++;
-        block_end++;
-    }/* while */
+		if ( rest >= SC_HTML_TAG_LEN(SC_HTML_TEXTAREA) ) {
+			ret = strncasecmp(c, SC_HTML_TEXTAREA, SC_HTML_TAG_LEN(SC_HTML_TEXTAREA));
+			if ( ret == 0 ) {
+				/* </textarea found  */
+				if ( !flag.textarea )
+					flag.textarea = 1;
 
-    if ( flag.head != 1 || 
-            flag.ehead !=1 ||
-            flag.ebody != 1 ||
-            (flag.link == 0 && flag.script == 0) ) {
-        /* HTML page is broken, or no link and script find in the page */
-        return 0;
-    }
+				/* </textarea will not add to content list alone, just skip 
+				 * the while tag */
+				tmp = strcasestr(c, "</textarea>");
+				if ( !tmp ) {
+					/* Warning: can not find </textarea> to terminate <textarea */
+					return -1;
+				}
+				block_end += tmp + SC_HTML_TAG_LEN("</textarea>") - c;
+				c = tmp + SC_HTML_TAG_LEN("</textarea>");
+				continue;
+			}
+		}
 
-    //block_end--; /* because *(page + block_end ) == '\0'; strip the last '\0' */ 
-    /* add tail content to content block */
-    if ( block_end > block_begin ) {
-        block = content_block_create(pool, block_begin, block_end, SC_TN_NONE);
-        if ( block ) {
-            linked_list_add(pool, content_lst, (void *)block);
-        } else {
-            /* content block create failed! */
-            return -1;
-        }
-    }
+		if ( rest >= SC_HTML_TAG_LEN(SC_HTML_COMMENT) ) {
+			ret = strncmp(c, SC_HTML_COMMENT, SC_HTML_TAG_LEN(SC_HTML_COMMENT));
+			if ( ret == 0) {
+				/* <!-- found */
+				if ( !flag.comment )
+					flag.comment = 1;
 
-    return 1;
+				/* <!-- --> will not add to content list alone, just skip
+				 * the while tag */
+				tmp = strstr(c, "-->");
+				if ( !tmp ) {
+					/* Warning: can not find --> to terminate <!-- */
+					return -1;
+				}
+				/* TODO: support IE */
+				block_end += tmp + SC_HTML_TAG_LEN("-->") - c;
+				c = tmp + SC_HTML_TAG_LEN("-->");
+				continue;
+			}
+		}
+
+		if ( rest >= SC_HTML_TAG_LEN(SC_HTML_EBODY) ) {
+			ret = strncasecmp(c, SC_HTML_EBODY, SC_HTML_TAG_LEN(SC_HTML_EBODY));
+			if ( ret == 0 ) {
+				/* </body> found */
+				if ( flag.ebody ) {
+					/* Warning: duplicated </body> found, just ignore it */
+					c += SC_HTML_TAG_LEN(SC_HTML_EBODY);
+					block_end += SC_HTML_TAG_LEN(SC_HTML_EBODY);
+					continue;
+				}
+				flag.ebody = 1;
+				block = content_block_create(pool, block_begin, block_end, SC_TN_NONE);
+				if ( block ) {
+					linked_list_add(pool, content_lst, (void *)block);
+					block_begin = block_end;
+				}else {
+					/* content block create failed! */
+					return -1;
+				}
+				c += SC_HTML_TAG_LEN(SC_HTML_EBODY);
+				block_end += SC_HTML_TAG_LEN(SC_HTML_EBODY);
+				block = content_block_create(pool, block_begin, block_end, SC_EBODY);
+				if ( block ) {
+					/* add to content list */
+					linked_list_add(pool, content_lst, (void *) block);
+					block_begin = block_end;
+				} else {
+					/* content block create failed! */
+					return -1;
+				}
+			}
+		}
+		c++;
+		block_end++;
+	}/* while */
+
+	if ( flag.head != 1 || 
+			flag.ehead !=1 ||
+			flag.ebody != 1 ||
+			(flag.link == 0 && flag.script == 0) ) {
+		/* HTML page is broken, or no link and script find in the page */
+		return 0;
+	}
+
+	//block_end--; /* because *(page + block_end ) == '\0'; strip the last '\0' */ 
+	/* add tail content to content block */
+	if ( block_end > block_begin ) {
+		block = content_block_create(pool, block_begin, block_end, SC_TN_NONE);
+		if ( block ) {
+			linked_list_add(pool, content_lst, (void *)block);
+		} else {
+			/* content block create failed! */
+			return -1;
+		}
+	}
+
+	return 1;
 }
 
 /* sc_core_style_parse parse the style list  */
-static int
+	static int
 sc_core_style_parse(ParamConfig *paramConfig, Buffer *html_page,
-        LinkedList *content_lst, LinkedList *style_lst,
-        LinkedList *syncStyleList, LinkedList *asyncStyleList)
+		LinkedList *content_lst, LinkedList *style_lst,
+		LinkedList *syncStyleList, LinkedList *asyncStyleList)
 {
-    sc_pool_t   *pool = NULL;
-    char        *unparsed_uri;
-    char        *page, *style_start = NULL;
-    ListNode    *list_node = NULL;
-    ContentBlock    *tmp_block, *block = NULL;
-    StyleField      *styleField = NULL;
-    enum StyleType  styleType = SC_TYPE_CSS;
-    /* used to strip duplicate styles */
-    sc_hash_t       *duplicates = NULL;
+	sc_pool_t   *pool = NULL;
+	char        *unparsed_uri;
+	char        *page, *style_start = NULL;
+	ListNode    *list_node = NULL;
+	ContentBlock    *tmp_block, *block = NULL;
+	StyleField      *styleField = NULL;
+	enum StyleType  styleType = SC_TYPE_CSS;
+	/* used to strip duplicate styles */
+	sc_hash_t       *duplicates = NULL;
 
-    /* Note: we manage styles in such structure:
-     *      domain[DOMAINS_COUNT] contains DOMAINS_COUNT hash tables. 
-     *      each hash table can has many groups.
-     *      each group is a hash table's node and it is composed by style list(type StyleList)
-     *      each stylelist is composed by one JS style list and one CSS style list.
-     */
-    sc_hash_t *domains[DOMAINS_COUNT] = { NULL, NULL };
-    sc_hash_t *group_hash = NULL;
-    StyleList *styleList = NULL;
-    LinkedList *list = NULL; /* can be JS list or CSS list */
+	/* Note: we manage styles in such structure:
+	 *      domain[DOMAINS_COUNT] contains DOMAINS_COUNT hash tables. 
+	 *      each hash table can has many groups.
+	 *      each group is a hash table's node and it is composed by style list(type StyleList)
+	 *      each stylelist is composed by one JS style list and one CSS style list.
+	 */
+	sc_hash_t *domains[DOMAINS_COUNT] = { NULL, NULL };
+	sc_hash_t *group_hash = NULL;
+	StyleList *styleList = NULL;
+	LinkedList *list = NULL; /* can be JS list or CSS list */
 
-    int stylecount, ret = -1;
+	int stylecount, ret = -1;
 
-    if ( !paramConfig ||
-            !html_page ||
-            !content_lst ||
-            !style_lst ||
-            !syncStyleList ||
-            !asyncStyleList )
-        return ret;
-    
-    pool = paramConfig->pool;
-    page = html_page->ptr;
-    unparsed_uri = paramConfig->unparsed_uri;
-    if ( !unparsed_uri )
-        return ret;
+	if ( !paramConfig ||
+			!html_page ||
+			!content_lst ||
+			!style_lst ||
+			!syncStyleList ||
+			!asyncStyleList )
+		return ret;
 
-    stylecount = 0;
-    duplicates = sc_hash_make(pool);
-    if ( !duplicates )
-        return ret;
+	pool = paramConfig->pool;
+	page = html_page->ptr;
+	unparsed_uri = paramConfig->unparsed_uri;
+	if ( !unparsed_uri )
+		return ret;
 
-    for ( list_node = style_lst->first; list_node; list_node = list_node->next ) {
-        block = (ContentBlock *)list_node->value;
-        if ( block->tagNameEnum == SC_SCRIPT ) {
-            styleType = SC_TYPE_JS;
-        }else if ( block->tagNameEnum == SC_LINK ) {
-            styleType = SC_TYPE_CSS;
-        }else {
-            /* should not run to here */
-            content_list_order_insert(pool, content_lst, (void *)block); 
-            continue;
-        }
-        style_start = page + block->bIndex;
+	stylecount = 0;
+	duplicates = sc_hash_make(pool);
+	if ( !duplicates )
+		return ret;
 
-        parserTag(paramConfig, paramConfig->styleParserTags[styleType],
-                &styleField, style_start);
-        if ( !styleField ) {
-            /* bad lucky!!
-             * put back to the content list */
-            content_list_order_insert(pool, content_lst, (void *)block); 
-            continue;
-        }
-        stylecount++;
+	for ( list_node = style_lst->first; list_node; list_node = list_node->next ) {
+		block = (ContentBlock *)list_node->value;
+		if ( block->tagNameEnum == SC_SCRIPT ) {
+			styleType = SC_TYPE_JS;
+		}else if ( block->tagNameEnum == SC_LINK ) {
+			styleType = SC_TYPE_CSS;
+		}else {
+			/* should not run to here */
+			content_list_order_insert(pool, content_lst, (void *)block); 
+			continue;
+		}
+		style_start = page + block->bIndex;
+
+		parserTag(paramConfig, paramConfig->styleParserTags[styleType],
+				&styleField, style_start);
+		if ( !styleField ) {
+			/* bad lucky!!
+			 * put back to the content list */
+			content_list_order_insert(pool, content_lst, (void *)block); 
+			continue;
+		}
+		stylecount++;
 
 #if 0
-        /* duplicate sync style does not add to sync style list.
-         *
-         * Note: there is a tricky here that isRepeact() not only return if it is duplicate
-         * but also set the styleField to duplicates hash table for the querying next time.
-         */
-        if( !styleField->async && isRepeat(pool, duplicates, styleField) ) {
-            continue;
-        }
+		/* duplicate sync style does not add to sync style list.
+		 *
+		 * Note: there is a tricky here that isRepeact() not only return if it is duplicate
+		 * but also set the styleField to duplicates hash table for the querying next time.
+		 */
+		if( !styleField->async && isRepeat(pool, duplicates, styleField) ) {
+			continue;
+		}
 #else 
-        /* duplicate styles does not add to style list.
-         *
-         * Note: there is a tricky here that isRepeact() not only return if it is duplicate
-         * but also set the styleField to duplicates hash table for the querying next time.
-         */
-        if( isRepeat(pool, duplicates, styleField) )
-            continue;
+		/* duplicate styles does not add to style list.
+		 *
+		 * Note: there is a tricky here that isRepeact() not only return if it is duplicate
+		 * but also set the styleField to duplicates hash table for the querying next time.
+		 */
+		if( isRepeat(pool, duplicates, styleField) )
+			continue;
 #endif
 
-        styleField->version = get_string_version(pool, unparsed_uri, 
-                styleField->styleUri, paramConfig->globalVariable);
-        if ( styleField->amd ) {
-            styleField->amdVersion = getAmdVersion(pool, unparsed_uri,
-                    styleField->styleUri, paramConfig->globalVariable);
-        }
+		styleField->version = get_string_version(pool, unparsed_uri, 
+				styleField->styleUri, paramConfig->globalVariable);
+		if ( styleField->amd ) {
+			styleField->amdVersion = getAmdVersion(pool, unparsed_uri,
+					styleField->styleUri, paramConfig->globalVariable);
+		}
 
 
-        /* if the block is a sync style and style position is not set can not combine directly
-         * we make a new block, do some necessary processes
-         * and then add it back to content list */
-        if( 0 == styleField->async && SC_NONE == styleField->position ) {
-            //tmp_block = content_block_create(pool, -1, 0, block->tagNameEnum);
-            tmp_block = content_block_create(pool, block->bIndex, block->eIndex, block->tagNameEnum);
-            if ( tmp_block ) {
-                /* FIXME: INIT_TAG_CONFIG initialized some variables 
-                 * that will be used later, but I think 
-                 * these change to local variables will be better. */
-                INIT_TAG_CONFIG(paramConfig, styleField, 
-                        paramConfig->pConfig->newDomains[styleField->domainIndex], 0);
+		/* if the block is a sync style and style position is not set can not combine directly
+		 * we make a new block, do some necessary processes
+		 * and then add it back to content list */
+		if( 0 == styleField->async && SC_NONE == styleField->position ) {
+			//tmp_block = content_block_create(pool, -1, 0, block->tagNameEnum);
+			tmp_block = content_block_create(pool, block->bIndex, block->eIndex, block->tagNameEnum);
+			if ( tmp_block ) {
+				/* FIXME: INIT_TAG_CONFIG initialized some variables 
+				 * that will be used later, but I think 
+				 * these change to local variables will be better. */
+				INIT_TAG_CONFIG(paramConfig, styleField, 
+						paramConfig->pConfig->newDomains[styleField->domainIndex], 0);
 
-                block->cntBlock = buffer_init_size(pool, 
-                        paramConfig->domain->used + styleField->styleUri->used + 100);
+				block->cntBlock = buffer_init_size(pool, 
+						paramConfig->domain->used + styleField->styleUri->used + 100);
 
-                addExtStyle(block->cntBlock, paramConfig);
+				addExtStyle(block->cntBlock, paramConfig);
 
-                content_list_order_insert(pool, content_lst, (void *)tmp_block);
+				content_list_order_insert(pool, content_lst, (void *)tmp_block);
 #if 0
-                /* TODO: clear tmp_block->bIndex and tmp_block->eIndex */
-                tmp_block->bIndex = -1;
-                tmp_block->eIndex = 0;
+				/* TODO: clear tmp_block->bIndex and tmp_block->eIndex */
+				tmp_block->bIndex = -1;
+				tmp_block->eIndex = 0;
 #endif
-            } else {
-                /* bad lucky */
-               content_list_order_insert(pool, content_lst, (void *)block); 
-            }
-           continue;
-        }
+			} else {
+				/* bad lucky */
+				content_list_order_insert(pool, content_lst, (void *)block); 
+			}
+			continue;
+		}
 
-        group_hash = domains[styleField->domainIndex];
-        if ( !group_hash ) {
-            group_hash = sc_hash_make(pool);
-            if ( !group_hash ) {
-                content_list_order_insert(pool, content_lst, (void *)block);
-                continue;
-            }
-            domains[styleField->domainIndex] = group_hash;
-        } 
-       
-        styleList = sc_hash_get(group_hash, styleField->group->ptr, styleField->group->used);
-        if ( !styleList ) {
-            styleList = (StyleList *) sc_palloc(pool, sizeof(StyleList)); 
-            if ( !styleList ) {
-                /* memory alloc failed */
-                content_list_order_insert(pool, content_lst, (void *)block);
-                continue;
-            }
-            styleList->domainIndex = styleField->domainIndex;
-            styleList->group = styleField->group;
-            styleList->list[0] = NULL, styleList->list[1] = NULL;
-            linked_list_add(pool, (styleField->async == 1 ? asyncStyleList : syncStyleList), styleList);
-            sc_hash_set(group_hash, styleField->group->ptr, styleField->group->used, styleList);
-        }
+		group_hash = domains[styleField->domainIndex];
+		if ( !group_hash ) {
+			group_hash = sc_hash_make(pool);
+			if ( !group_hash ) {
+				content_list_order_insert(pool, content_lst, (void *)block);
+				continue;
+			}
+			domains[styleField->domainIndex] = group_hash;
+		} 
 
-        list = styleList->list[styleField->styleType];
-        if ( !list ) {
-            list = linked_list_create(pool);
-            if ( !list ) {
-                content_list_order_insert(pool, content_lst, (void *)block);
-                continue;
-            }
-            styleList->list[styleField->styleType] = list;
-        }
+		styleList = sc_hash_get(group_hash, styleField->group->ptr, styleField->group->used);
+		if ( !styleList ) {
+			styleList = (StyleList *) sc_palloc(pool, sizeof(StyleList)); 
+			if ( !styleList ) {
+				/* memory alloc failed */
+				content_list_order_insert(pool, content_lst, (void *)block);
+				continue;
+			}
+			styleList->domainIndex = styleField->domainIndex;
+			styleList->group = styleField->group;
+			styleList->list[0] = NULL, styleList->list[1] = NULL;
+			linked_list_add(pool, (styleField->async == 1 ? asyncStyleList : syncStyleList), styleList);
+			sc_hash_set(group_hash, styleField->group->ptr, styleField->group->used, styleList);
+		}
 
-        if ( styleField->amd && paramConfig->globalVariable->isAmdVersionGood 
-                && strcmp(styleField->amdVersion->ptr, "false") != 0 ) {
-            parseDependecies(pool, paramConfig->globalVariable, styleField,
-                                list, unparsed_uri, duplicates);
-        } else {
-            linked_list_add(pool, list, styleField);
-        }
-    }
+		list = styleList->list[styleField->styleType];
+		if ( !list ) {
+			list = linked_list_create(pool);
+			if ( !list ) {
+				content_list_order_insert(pool, content_lst, (void *)block);
+				continue;
+			}
+			styleList->list[styleField->styleType] = list;
+		}
 
-    return stylecount;
+		if ( styleField->amd && paramConfig->globalVariable->isAmdVersionGood 
+				&& strcmp(styleField->amdVersion->ptr, "false") != 0 ) {
+			parseDependecies(pool, paramConfig->globalVariable, styleField,
+					list, unparsed_uri, duplicates);
+		} else {
+			linked_list_add(pool, list, styleField);
+		}
+	}
+
+	return stylecount;
 }
 
-static int
+	static int
 sc_core_split_asynclist_by_domain(sc_pool_t *pool, LinkedList *asynclist,
-        LinkedList *async_list_domain[DOMAINS_COUNT])
+		LinkedList *async_list_domain[DOMAINS_COUNT])
 {
-    int ret = -1;
-    ListNode    *node = NULL;
-    LinkedList *domain_list = NULL;
-    StyleList   *styleList = NULL;
+	int ret = -1;
+	ListNode    *node = NULL;
+	LinkedList *domain_list = NULL;
+	StyleList   *styleList = NULL;
 
-    if ( !pool ||
-            !asynclist ||
-            !async_list_domain )
-        return ret;
-    
-    for ( node = asynclist->first; node ; node = node->next ) {
-        styleList = (StyleList *)node->value;
-        domain_list = async_list_domain[styleList->domainIndex];
-        if ( !domain_list ) {
-            domain_list = linked_list_create(pool);
-            if ( !domain_list ) {
-                /* create list failed!!! */
-                return ret;
-            }
-            async_list_domain[styleList->domainIndex] = domain_list;
-        }
-        linked_list_add(pool, domain_list, styleList);
-    }
-    return 0;
+	if ( !pool ||
+			!asynclist ||
+			!async_list_domain )
+		return ret;
+
+	for ( node = asynclist->first; node ; node = node->next ) {
+		styleList = (StyleList *)node->value;
+		domain_list = async_list_domain[styleList->domainIndex];
+		if ( !domain_list ) {
+			domain_list = linked_list_create(pool);
+			if ( !domain_list ) {
+				/* create list failed!!! */
+				return ret;
+			}
+			async_list_domain[styleList->domainIndex] = domain_list;
+		}
+		linked_list_add(pool, domain_list, styleList);
+	}
+	return 0;
 }
 
-static int
+	static int
 sc_core_combine_async_style(ParamConfig *paramConfig, 
-        LinkedList *async_list_domain[DOMAINS_COUNT], Buffer *combinedStyleBuf[3])
+		LinkedList *async_list_domain[DOMAINS_COUNT], Buffer *combinedStyleBuf[3])
 {
-    CombineConfig *pConfig = NULL;
-    sc_pool_t *pool;
-    Buffer  *headBuf = NULL;
-    Buffer  *variableName = NULL;
+	CombineConfig *pConfig = NULL;
+	sc_pool_t *pool;
+	Buffer  *headBuf = NULL;
+	Buffer  *variableName = NULL;
 
-    LinkedList  *domain_list = NULL;
-    ListNode    *node = NULL;
-    StyleList   *styleList = NULL;
+	LinkedList  *domain_list = NULL;
+	ListNode    *node = NULL;
+	StyleList   *styleList = NULL;
 
-    short   add_script_prefix  = 0;
-    short   add_async_var = 0;
-    int i, ret = -1;
+	short   add_script_prefix  = 0;
+	short   add_async_var = 0;
+	int i, ret = -1;
 
 
-    if ( !*async_list_domain ||
-            !paramConfig ||
-            !combinedStyleBuf ) {
-        return ret;
-    }
+	if ( !*async_list_domain ||
+			!paramConfig ||
+			!combinedStyleBuf ) {
+		return ret;
+	}
 
-    pConfig = paramConfig->pConfig;
-    pool = paramConfig->pool;
+	pConfig = paramConfig->pConfig;
+	pool = paramConfig->pool;
 
-    for ( i = 0; i < DOMAINS_COUNT; i++ ) {
-        domain_list = async_list_domain[i];
-        if ( !domain_list ) {
-            continue;
-        }
+	for ( i = 0; i < DOMAINS_COUNT; i++ ) {
+		domain_list = async_list_domain[i];
+		if ( !domain_list ) {
+			continue;
+		}
 
-        if ( !add_script_prefix ) {
-            combinedStyleBuf[SC_HEAD] = headBuf = buffer_init_size(pool, 2048);
-            if ( !headBuf ) {
-                /* buffer create failed */
-                return ret;
-            }
-            string_append(pool, combinedStyleBuf[SC_HEAD],
-                    "\n<script type=\"text/javascript\">\n", 33);
-            add_script_prefix = 1;
-        }
-        add_async_var = 0;
-        for ( node = domain_list->first; node; node = node->next ) {
-            styleList = (StyleList *)node->value; 
-            variableName = pConfig->asyncVariableNames[styleList->domainIndex];
-            if ( !add_async_var ) {
-                string_append(pool, headBuf, "var ", 4);
-                string_append(pool, headBuf, variableName->ptr, variableName->used);
-                string_append(pool, headBuf, "={", 2);
-                add_async_var = 1;
-            } 
-            combineStylesAsync(paramConfig, styleList, headBuf);
-        }
-        if ( add_async_var ) {
-            string_append(pool, headBuf, "};\n", 3);
-        }
-    }
+		if ( !add_script_prefix ) {
+			combinedStyleBuf[SC_HEAD] = headBuf = buffer_init_size(pool, 2048);
+			if ( !headBuf ) {
+				/* buffer create failed */
+				return ret;
+			}
+			string_append(pool, combinedStyleBuf[SC_HEAD],
+					"\n<script type=\"text/javascript\">\n", 33);
+			add_script_prefix = 1;
+		}
+		add_async_var = 0;
+		for ( node = domain_list->first; node; node = node->next ) {
+			styleList = (StyleList *)node->value; 
+			variableName = pConfig->asyncVariableNames[styleList->domainIndex];
+			if ( !add_async_var ) {
+				string_append(pool, headBuf, "var ", 4);
+				string_append(pool, headBuf, variableName->ptr, variableName->used);
+				string_append(pool, headBuf, "={", 2);
+				add_async_var = 1;
+			} 
+			combineStylesAsync(paramConfig, styleList, headBuf);
+		}
+		if ( add_async_var ) {
+			string_append(pool, headBuf, "};\n", 3);
+		}
+	}
 
-    if ( add_script_prefix ) {
-        string_append(pool, headBuf, "</script>\n", 10);
-    }
+	if ( add_script_prefix ) {
+		string_append(pool, headBuf, "</script>\n", 10);
+	}
 
-    return 0;
+	return 0;
 }
 
-static int
+	static int
 sc_core_combine_sync_style(ParamConfig *paramConfig, LinkedList *sync_style_list,
-        Buffer *combinedStyleBuf[3])
+		Buffer *combinedStyleBuf[3])
 {
-    ListNode    *node = NULL;
-    StyleList   *styleList = NULL;
-    LinkedList  *list = NULL;
-    int i, ret = -1;
+	ListNode    *node = NULL;
+	StyleList   *styleList = NULL;
+	LinkedList  *list = NULL;
+	int i, ret = -1;
 
-    if ( !paramConfig ||
-            !sync_style_list ||
-            !combinedStyleBuf)
-        return ret;
+	if ( !paramConfig ||
+			!sync_style_list ||
+			!combinedStyleBuf)
+		return ret;
 
-    for ( node = sync_style_list->first; node; node = node->next ) {
-        styleList = (StyleList *)node->value;
-        for ( i = 0; i < 2; i++ ) {
-           list = styleList->list[i]; 
-           combineStyles(paramConfig, list, combinedStyleBuf);
-        }
-    }
-    return 0;
+	for ( node = sync_style_list->first; node; node = node->next ) {
+		styleList = (StyleList *)node->value;
+		for ( i = 0; i < 2; i++ ) {
+			list = styleList->list[i]; 
+			combineStyles(paramConfig, list, combinedStyleBuf);
+		}
+	}
+	return 0;
 }
 
-static int
+	static int
 sc_core_combine_style_debug(ParamConfig *paramConfig, Buffer *combinedStyleBuf[3],
-        LinkedList *async_list_domain[DOMAINS_COUNT], LinkedList *sync_style_list)
+		LinkedList *async_list_domain[DOMAINS_COUNT], LinkedList *sync_style_list)
 {
-    int i,ret = -1;
+	int i,ret = -1;
 
-    if ( !paramConfig ||
-            !combinedStyleBuf ||
-            !async_list_domain ||
-            !sync_style_list )
-        return ret;
+	if ( !paramConfig ||
+			!combinedStyleBuf ||
+			!async_list_domain ||
+			!sync_style_list )
+		return ret;
 
-    combineStylesDebug(paramConfig, sync_style_list, combinedStyleBuf);
-    for(i = 0; i < DOMAINS_COUNT; i++) {
-        LinkedList *asyncList = async_list_domain[i];
-        if(NULL != asyncList) {
-            combineStylesDebug(paramConfig, asyncList, combinedStyleBuf);
-        }
-    }
+	combineStylesDebug(paramConfig, sync_style_list, combinedStyleBuf);
+	for(i = 0; i < DOMAINS_COUNT; i++) {
+		LinkedList *asyncList = async_list_domain[i];
+		if(NULL != asyncList) {
+			combineStylesDebug(paramConfig, asyncList, combinedStyleBuf);
+		}
+	}
 
-    return 0;
+	return 0;
 }
 
 /* sc_core scan whole HTML page then returns content block list and combined style buffer.
@@ -1153,75 +1169,75 @@ sc_core_combine_style_debug(ParamConfig *paramConfig, Buffer *combinedStyleBuf[3
  * Output: how many styles has been combined.
  */
 int sc_core(ParamConfig *paramConfig, Buffer *html_page, 
-       Buffer *combinedStyleBuf[3], LinkedList *blockList)
+		Buffer *combinedStyleBuf[3], LinkedList *blockList)
 {
-    sc_pool_t *pool;
-    LinkedList *style_lst;
-    LinkedList *syncStyleList, *asyncStyleList;
-    LinkedList *async_list_domain[DOMAINS_COUNT] = { NULL, NULL };
-    int stylecount = -1;
-    int ret = -1;
+	sc_pool_t *pool;
+	LinkedList *style_lst;
+	LinkedList *syncStyleList, *asyncStyleList;
+	LinkedList *async_list_domain[DOMAINS_COUNT] = { NULL, NULL };
+	int stylecount = -1;
+	int ret = -1;
 
-    if ( !paramConfig ||
-            !html_page ||
-            !combinedStyleBuf ||
-            !blockList )
-        return ret;
+	if ( !paramConfig ||
+			!html_page ||
+			!combinedStyleBuf ||
+			!blockList )
+		return ret;
 
-    pool = paramConfig->pool;
+	pool = paramConfig->pool;
 
-    style_lst = linked_list_create(pool);
-    if ( !style_lst )
-        return ret;
-    syncStyleList = linked_list_create(pool);
-    if ( !syncStyleList )
-        return ret;
-    asyncStyleList = linked_list_create(pool);
-    if ( !asyncStyleList )
-        return ret;
+	style_lst = linked_list_create(pool);
+	if ( !style_lst )
+		return ret;
+	syncStyleList = linked_list_create(pool);
+	if ( !syncStyleList )
+		return ret;
+	asyncStyleList = linked_list_create(pool);
+	if ( !asyncStyleList )
+		return ret;
 
-    /* 1. scan while HTML page */
-    ret = sc_core_page_scan(pool, html_page, blockList, style_lst);
-    if ( ret != 1 )
-        return ret;
+	/* 1. scan while HTML page */
+	ret = sc_core_page_scan(pool, html_page, blockList, style_lst);
+	if ( ret != 1 )
+		return ret;
 
-    /* 2. parse style list */
-    stylecount = sc_core_style_parse(paramConfig, html_page, blockList, style_lst,
-            syncStyleList, asyncStyleList);
-    if ( stylecount <= 0 )
-        return stylecount;
+	/* 2. parse style list */
+	stylecount = sc_core_style_parse(paramConfig, html_page, blockList, style_lst,
+			syncStyleList, asyncStyleList);
+	if ( stylecount <= 0 )
+		return stylecount;
 
-    /* 3. split async style by domain */
-    if ( asyncStyleList->size ) {
-        ret = sc_core_split_asynclist_by_domain(pool,
-                asyncStyleList, (LinkedList **)async_list_domain);
-        if ( ret ) 
-            return ret;
-    }
+	/* 3. split async style by domain */
+	if ( asyncStyleList->size ) {
+		ret = sc_core_split_asynclist_by_domain(pool,
+				asyncStyleList, (LinkedList **)async_list_domain);
+		if ( ret ) 
+			return ret;
+	}
 
-    /* 4. combine style list */
-    if ( DEBUG_OFF == paramConfig->debugMode ) {
-        if ( asyncStyleList->size ) {
-            /* async list combine */
-            ret = sc_core_combine_async_style(paramConfig,
-                    (LinkedList **)async_list_domain, combinedStyleBuf);
-            if ( ret )
-                return ret;
-        }
+	/* 4. combine style list */
+	if ( DEBUG_OFF == paramConfig->debugMode ) {
+		if ( asyncStyleList->size ) {
+			/* async list combine */
+			ret = sc_core_combine_async_style(paramConfig,
+					(LinkedList **)async_list_domain, combinedStyleBuf);
+			if ( ret )
+				return ret;
+		}
 
-        if ( syncStyleList->size ) {
-            /* sync list combine */
-            ret = sc_core_combine_sync_style(paramConfig, syncStyleList, combinedStyleBuf);
-            if ( ret )
-                return ret;
-        }
+		if ( syncStyleList->size ) {
+			/* sync list combine */
+			ret = sc_core_combine_sync_style(paramConfig, syncStyleList, combinedStyleBuf);
+			if ( ret )
+				return ret;
+		}
 
-    }else if ( DEBUG_STYLECOMBINE == paramConfig->debugMode ) {
-        if ( syncStyleList->size ) {
-            sc_core_combine_style_debug(paramConfig, combinedStyleBuf,
-                async_list_domain, syncStyleList);
-        }
-    }
+	}else if ( DEBUG_STYLECOMBINE == paramConfig->debugMode ) {
+		if ( syncStyleList->size ) {
+			sc_core_combine_style_debug(paramConfig, combinedStyleBuf,
+					async_list_domain, syncStyleList);
+		}
+	}
 
-    return stylecount;
+	return stylecount;
 }
