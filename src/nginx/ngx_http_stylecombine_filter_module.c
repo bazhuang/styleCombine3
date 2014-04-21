@@ -400,7 +400,7 @@ ngx_http_stylecombine_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
                                                                        
     ctx = ngx_http_get_module_ctx(r, ngx_http_stylecombine_filter_module);  
                                                                     
-    if (ctx == NULL || r->header_only) {               
+    if (ctx == NULL || r->header_only || NULL == in) {               
         return ngx_http_next_body_filter(r, in);                    
     }                                                               
     
@@ -842,7 +842,6 @@ ngx_http_stylecombine_process(ngx_http_request_t *r)
     ngx_http_stylecombine_length(r, b);
     return b;
 }
-                                                                            
 
 static ngx_int_t
 ngx_http_stylecombine_send(ngx_http_request_t *r, ngx_http_stylecombine_ctx_t *ctx,
