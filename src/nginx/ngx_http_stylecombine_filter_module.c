@@ -267,16 +267,16 @@ static char *ngx_http_stylecombine_merge_conf(ngx_conf_t *cf,void *parent, void 
 
     /* async variable names */
     ngx_conf_merge_ptr_value(conf->async_var_names, prev->async_var_names, NGX_CONF_UNSET_PTR);
-    if ( conf->async_var_names == NGX_CONF_UNSET_PTR ) {
-        ngx_log_stderr(0, "SC_AsyncVariableNames is required");
-        return NGX_CONF_ERROR;
-    }
-    for ( i = 0; i < saved_count; i++ ) {
-        sc_conf->asyncVariableNames[i] =  \
-            ngx_sc_array_to_buffer(cf->pool, conf->async_var_names, i);
-        if ( NULL == sc_conf->asyncVariableNames[i] )
-            return NGX_CONF_ERROR;
-    }
+    if ( conf->async_var_names != NGX_CONF_UNSET_PTR ) {
+		for ( i = 0; i < saved_count; i++ ) {
+			sc_conf->asyncVariableNames[i] =  \
+				ngx_sc_array_to_buffer(cf->pool, conf->async_var_names, i);
+			if ( NULL == sc_conf->asyncVariableNames[i] ) {
+				ngx_log_stderr(0, "domain #%d's SC_AsyncVariableNames is NULL", i);
+				return NGX_CONF_ERROR;
+			}
+		}
+	}
 
     /* max url len */
     ngx_conf_merge_value(conf->max_url_len, prev->max_url_len, 1024);
