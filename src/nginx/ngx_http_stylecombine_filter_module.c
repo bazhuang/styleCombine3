@@ -215,9 +215,8 @@ static char *ngx_http_stylecombine_merge_conf(ngx_conf_t *cf,void *parent, void 
         return NGX_CONF_OK;
 
     /* appname */
-    ngx_str_t sc_app_unknow = ngx_string("SC_APP_NAME_UNKNOW");
-    ngx_conf_merge_str_value(conf->app_name, prev->app_name, "SC_APP_NAME_UNKNOW");
-    if ( ngx_strncmp(conf->app_name.data, sc_app_unknow.data, sc_app_unknow.len) == 0 ) {
+    ngx_conf_merge_str_value(conf->app_name, prev->app_name, NULL);
+    if ( conf->app_name.data == NULL ) {
         ngx_log_stderr(0, "SC_AppName is required");
         return NGX_CONF_ERROR;
     }
@@ -259,11 +258,8 @@ static char *ngx_http_stylecombine_merge_conf(ngx_conf_t *cf,void *parent, void 
     }
 
     /* filter content type */
-    ngx_str_t sc_filter_cntx_type_unknow = ngx_string("SC_FILTER_CNTX_TYPE_UNKNOW");
-    ngx_conf_merge_str_value(conf->filter_cntx_type, prev->filter_cntx_type,  \
-            "SC_FILTER_CNTX_TYPE_UNKNOW");
-    if ( ngx_strncmp(conf->filter_cntx_type.data, sc_filter_cntx_type_unknow.data, \
-                sc_filter_cntx_type_unknow.len) == 0 ) {
+    ngx_conf_merge_str_value(conf->filter_cntx_type, prev->filter_cntx_type, NULL);
+    if ( conf->filter_cntx_type.data == NULL ) {
         ngx_log_stderr(0, "SC_FilterCntType is required");
         return NGX_CONF_ERROR;
     }
@@ -287,19 +283,17 @@ static char *ngx_http_stylecombine_merge_conf(ngx_conf_t *cf,void *parent, void 
     sc_conf->maxUrlLen = (int)conf->max_url_len; 
 
     /* black list */
-    ngx_str_t sc_black_lst_unknow = ngx_string("SC_BLACK_LST_UNKNOW");
-    ngx_conf_merge_str_value(conf->black_lst, prev->black_lst, "SC_BLACK_LST_UNKNOW");
-    if ( ngx_strncmp(conf->black_lst.data, sc_black_lst_unknow.data, sc_black_lst_unknow.len) != 0 ) {
+    ngx_conf_merge_str_value(conf->black_lst, prev->black_lst, NULL);
+    if ( conf->black_lst.data != NULL ) {
         if ( ngx_sc_setBlackList(cf->pool, sc_conf, &conf->black_lst) )
             return NGX_CONF_ERROR;
     }
 
     /* white list */
-    ngx_str_t sc_white_lst_unknow = ngx_string("SC_WHITE_LST_UNKNOW");
-    ngx_conf_merge_str_value(conf->white_lst, prev->white_lst, "SC_WHITE_LST_UNKNOW");
-    if ( ngx_strncmp(conf->white_lst.data, sc_white_lst_unknow.data, sc_white_lst_unknow.len) != 0 ) {
-        if ( ngx_sc_setWhiteList(cf->pool, sc_conf, &conf->white_lst) )
-            return NGX_CONF_ERROR;
+    ngx_conf_merge_str_value(conf->white_lst, prev->white_lst, NULL);
+    if ( conf->white_lst.data != NULL ) {
+		if ( ngx_sc_setWhiteList(cf->pool, sc_conf, &conf->white_lst) )
+			return NGX_CONF_ERROR;
     }
     
     return NGX_CONF_OK;

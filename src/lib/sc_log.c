@@ -1,6 +1,6 @@
 #include "sc_log.h"
 
-#ifdef SC_NGINX_PLATFORM
+#if  !(SC_NGINX_PLATFORM) && !(SC_HTTPD_PLATFORM)
 
 void sc_log_core(int logLevelMask, const char *fmt, va_list args)
 {
