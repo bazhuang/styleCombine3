@@ -660,7 +660,7 @@ sc_core_page_scan(sc_pool_t *pool, Buffer *html_page,
 		}
 
 		if ( rest >= SC_HTML_TAG_LEN(SC_HTML_LINK) ) {
-			ret = strncasecmp(c, SC_HTML_LINK, SC_HTML_TAG_LEN(SC_HTML_LINK));
+			ret = strncmp(c, SC_HTML_LINK, SC_HTML_TAG_LEN(SC_HTML_LINK));
 			if ( ret == 0 ) {
 				/* <link found */
 				if ( !flag.link )
@@ -700,7 +700,7 @@ sc_core_page_scan(sc_pool_t *pool, Buffer *html_page,
 		}
 
 		if ( rest >= SC_HTML_TAG_LEN(SC_HTML_SCRIPT) ) {
-			ret = strncasecmp(c, SC_HTML_SCRIPT, SC_HTML_TAG_LEN(SC_HTML_SCRIPT));
+			ret = strncmp(c, SC_HTML_SCRIPT, SC_HTML_TAG_LEN(SC_HTML_SCRIPT));
 			if ( ret == 0 ) {
 				/* <script found */
 				if ( !flag.script ) {
