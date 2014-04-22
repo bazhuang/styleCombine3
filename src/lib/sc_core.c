@@ -452,12 +452,15 @@ static void parseDependecies(sc_pool_t *pool, GlobalVariable *globalVariable,
 		StyleField *styleFieldAmd = style_field_create(pool);
 		Buffer *dependBuf = buffer_init_size(pool, 1024);
 
+		string_append(pool, dependBuf, result[i], strlen(result[i]));
+#if 0
 		char *restr = sc_pstrdup(pool, result[i]);
 		dependBuf->ptr = restr;
 		dependBuf->used = strlen(restr);
 
 		//        dependBuf->ptr = result[i];
 		//        dependBuf->used = strlen(result[i]);
+#endif
 
 		styleFieldAmd->async = styleField->async;
 		styleFieldAmd->styleType = styleField->styleType;
@@ -865,8 +868,9 @@ sc_core_style_parse(ParamConfig *paramConfig, Buffer *html_page,
 	sc_hash_t *group_hash = NULL;
 	StyleList *styleList = NULL;
 	LinkedList *list = NULL; /* can be JS list or CSS list */
+	ListNode	*parentNode, *styleNode;
 
-	int stylecount, ret = -1;
+	int stylecount, ret = -1, i;
 
 	if ( !paramConfig ||
 			!html_page ||
@@ -911,7 +915,7 @@ sc_core_style_parse(ParamConfig *paramConfig, Buffer *html_page,
 		}
 		stylecount++;
 
-#if 0
+#if 1
 		/* duplicate sync style does not add to sync style list.
 		 *
 		 * Note: there is a tricky here that isRepeact() not only return if it is duplicate
@@ -1010,6 +1014,39 @@ sc_core_style_parse(ParamConfig *paramConfig, Buffer *html_page,
 					list, unparsed_uri, duplicates);
 		} else {
 			linked_list_add(pool, list, styleField);
+		}
+	}
+
+	/* strip async style list duplicate style from sync style list */
+	if ( asyncStyleList->size ) {
+		for ( list_node = asyncStyleList->first; list_node ; list_node = list_node->next ) {
+			styleList = (StyleList *)list_node->value;
+
+			for ( i = 0; i < 2; i++ ) {
+				list = styleList->list[i];
+				if ( !list || !list->size ) {
+					continue;
+				}
+
+				parentNode = NULL;
+				styleNode = (ListNode *)list->first;
+				while ( NULL != styleNode ) {
+					styleField = (StyleField *) styleNode->value;
+					if (isRepeat(pool, duplicates, styleField)) {
+						/* if exeist delete this node */
+						if (NULL == parentNode) {
+							list->first = styleNode->next;
+						} else {
+							parentNode->next = styleNode->next;
+						}
+						styleNode = styleNode->next;
+						list->size--;
+						continue;
+					}
+					parentNode = styleNode;
+					styleNode = styleNode->next;
+				}
+			}
 		}
 	}
 
