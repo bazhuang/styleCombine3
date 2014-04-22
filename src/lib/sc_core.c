@@ -900,6 +900,7 @@ sc_core_style_parse(ParamConfig *paramConfig, Buffer *html_page,
 		}
 		style_start = page + block->bIndex;
 
+		styleField = NULL;
 		parserTag(paramConfig, paramConfig->styleParserTags[styleType],
 				&styleField, style_start);
 		if ( !styleField ) {
