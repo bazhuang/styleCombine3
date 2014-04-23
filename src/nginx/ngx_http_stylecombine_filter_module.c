@@ -359,6 +359,19 @@ ngx_http_stylecombine_header_filter(ngx_http_request_t *r)
         return ngx_http_next_header_filter(r);
     }
 
+    /* update (or initialize) stylecombine global variables */
+    check_version_update(conf->sc_global_config.server_pool, r->pool, \
+			&conf->sc_global_config);
+    checkAmdVersionUpdate(conf->sc_global_config.server_pool, r->pool, \
+			&conf->sc_global_config);
+
+    //dongming.jidm
+    Buffer *appState = get_string_version(r->pool, (char *)r->uri.data, \
+			sc_conf->appName, &conf->sc_global_config);
+    if (strcmp(appState->ptr, "off") == 0) {
+		return ngx_http_next_header_filter(r);
+    }
+
     /* alloc per request content */
     ctx = ngx_pcalloc(r->pool, sizeof(ngx_http_stylecombine_ctx_t));    
     if (ctx == NULL) {                                          
@@ -372,12 +385,6 @@ ngx_http_stylecombine_header_filter(ngx_http_request_t *r)
     ctx->saved_page_size = ctx->page_size = r->headers_out.content_length_n;
 
     ngx_http_clear_content_length(r);
-
-    /* update (or initialize) stylecombine global variables */
-    check_version_update(conf->sc_global_config.server_pool, r->pool, \
-            &conf->sc_global_config);
-    checkAmdVersionUpdate(conf->sc_global_config.server_pool, r->pool, \
-            &conf->sc_global_config);
 
     r->main_filter_need_in_memory = 1;
     r->allow_ranges = 0;              
