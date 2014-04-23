@@ -696,6 +696,7 @@ sc_core_page_scan(sc_pool_t *pool, Buffer *html_page,
 					}
 				} else {
 					/* Warning: can not find "/>" to terminate "<link" */
+					sc_log_error("cannot find '>' to terminate '<link'");
 					return -1;
 				}
 				continue;
@@ -725,6 +726,7 @@ sc_core_page_scan(sc_pool_t *pool, Buffer *html_page,
 				/* find the end of <script */
 				tmp = strcasestr(c, "</script>");
 				if ( !tmp ) {
+					sc_log_error("cannot find '</script>' to terminate '<script'");
 					return -1;
 				}
 				block_end += tmp + SC_HTML_TAG_LEN("</script>") - c;
@@ -754,6 +756,7 @@ sc_core_page_scan(sc_pool_t *pool, Buffer *html_page,
 				tmp = strcasestr(c, "</textarea>");
 				if ( !tmp ) {
 					/* Warning: can not find </textarea> to terminate <textarea */
+					sc_log_error("cannot find '</textarea>' to terminate '<textarea'");
 					return -1;
 				}
 				block_end += tmp + SC_HTML_TAG_LEN("</textarea>") - c;
@@ -774,6 +777,7 @@ sc_core_page_scan(sc_pool_t *pool, Buffer *html_page,
 				tmp = strstr(c, "-->");
 				if ( !tmp ) {
 					/* Warning: can not find --> to terminate <!-- */
+					sc_log_error("cannot find '-->' to terminate '<!--'");
 					return -1;
 				}
 				/* TODO: support IE */
@@ -915,7 +919,6 @@ sc_core_style_parse(ParamConfig *paramConfig, Buffer *html_page,
 		}
 		stylecount++;
 
-#if 1
 		/* duplicate sync style does not add to sync style list.
 		 *
 		 * Note: there is a tricky here that isRepeact() not only return if it is duplicate
@@ -924,15 +927,6 @@ sc_core_style_parse(ParamConfig *paramConfig, Buffer *html_page,
 		if( !styleField->async && isRepeat(pool, duplicates, styleField) ) {
 			continue;
 		}
-#else 
-		/* duplicate styles does not add to style list.
-		 *
-		 * Note: there is a tricky here that isRepeact() not only return if it is duplicate
-		 * but also set the styleField to duplicates hash table for the querying next time.
-		 */
-		if( isRepeat(pool, duplicates, styleField) )
-			continue;
-#endif
 
 		styleField->version = get_string_version(pool, unparsed_uri, 
 				styleField->styleUri, paramConfig->globalVariable);
@@ -1237,7 +1231,7 @@ int sc_core(ParamConfig *paramConfig, Buffer *html_page,
 	/* 1. scan while HTML page */
 	ret = sc_core_page_scan(pool, html_page, blockList, style_lst);
 	if ( ret != 1 )
-		return ret;
+		return 0;
 
 	/* 2. parse style list */
 	stylecount = sc_core_style_parse(paramConfig, html_page, blockList, style_lst,

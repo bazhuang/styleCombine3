@@ -533,7 +533,8 @@ ngx_http_stylecombine_read(ngx_http_request_t *r, ngx_chain_t *in)
              */ 
             ctx->page = ngx_pcalloc(r->pool, ctx->page_size + 100);
 #else
-            ctx->page = ngx_palloc(r->pool, ctx->page_size);
+            ctx->page = ngx_palloc(r->pool, ctx->page_size + 1);
+			*(ctx->page + ctx->page_size) = '\0';
 #endif
             if (ctx->page == NULL) {
                 return NGX_ERROR;
@@ -574,7 +575,8 @@ ngx_http_stylecombine_read(ngx_http_request_t *r, ngx_chain_t *in)
              */
             ctx->page = ngx_pcalloc(r->pool, ctx->page_size + 100);
 #else
-            ctx->page = ngx_palloc(r->pool, ctx->page_size);
+            ctx->page = ngx_palloc(r->pool, ctx->page_size + 1);
+			*(ctx->page + ctx->page_size) = '\0';
 #endif
             if (ctx->page == NULL) {
                 return NGX_ERROR;
