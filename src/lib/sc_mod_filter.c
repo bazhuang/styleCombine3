@@ -72,12 +72,12 @@ short is_filter_uri(char *uri, LinkedList *blackList, LinkedList *whiteList) {
 	if (NULL == uri) {
 		return 0;
 	}
-	if (NULL == blackList && blackList->size > 0) {
+	if (blackList && blackList->size > 0) {
 		if (string_matcher_by_regex(uri, blackList)) {
 			return 1;
 		}
 	}
-	if (NULL == whiteList && whiteList->size > 0) {
+	if (whiteList && whiteList->size > 0) {
 		if (!string_matcher_by_regex(uri, whiteList)) {
 			return 1;
 		}
