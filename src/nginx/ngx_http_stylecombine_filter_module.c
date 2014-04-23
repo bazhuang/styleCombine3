@@ -295,6 +295,11 @@ static char *ngx_http_stylecombine_merge_conf(ngx_conf_t *cf,void *parent, void 
 		if ( ngx_sc_setWhiteList(cf->pool, sc_conf, &conf->white_lst) )
 			return NGX_CONF_ERROR;
     }
+
+	if ( conf->black_lst.data && conf->white_lst.data ) {
+		ngx_log_stderr(0, "SC_BlackList and SC_WhiteList can not exist at the same time");
+		return NGX_CONF_ERROR;
+	}
     
     return NGX_CONF_OK;
 }
@@ -349,7 +354,7 @@ ngx_http_stylecombine_header_filter(ngx_http_request_t *r)
                                                                        
     /* black & white list */
     if ( is_filter_uri((char *)r->uri.data, sc_conf->blackList, sc_conf->whiteList) ) {
-        ngx_http_next_header_filter(r);
+        return ngx_http_next_header_filter(r);
     }
 
     /* FIXME: if HTML page size bigger than 2MiB 
