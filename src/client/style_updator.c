@@ -7,6 +7,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <stdlib.h>
+#include <signal.h>
 
 #if defined(SC_HTTPD_PLATFORM)
 #include "apr_file_info.h"
@@ -345,8 +346,26 @@ void get_last_modified(Buffer *lastModifiedBuf, char *responseCnt)
 
 int execute_cmd(char *cmd)
 {
+	struct sigaction sa, old_sa;
+
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = 0;
+	sa.sa_handler = SIG_DFL;
+
+	if (sigaction(SIGCHLD, &sa, &old_sa) < 0) {
+		sc_log_error("%s, cannot set SIGCHLD handler", __func__);
+		return -1;
+	}
+
 	if(-1 == system(cmd)) {
 		sc_log_error("system(%s) error:%s\n", cmd, strerror(errno));
+		if (sigaction(SIGCHLD, &old_sa, NULL) < 0)
+			sc_log_error("%s, cannot set back SIGCHLD handler", __func__);
+		return -1;
+	}
+
+	if (sigaction(SIGCHLD, &old_sa, NULL) < 0){
+		sc_log_error("%s, cannot set back SIGCHLD handler", __func__);
 		return -1;
 	}
 
