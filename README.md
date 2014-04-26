@@ -6,16 +6,22 @@ styleCombine3
 
 styleCombine 有以下几个核心功能：
 
-1、将 HTML 页面上的多个 js/css 请求自动地合并成一个请求，发送给 combo 服务器。 --- 促进应用模块化架构
+1、将 HTML 页面上的多个 js/css 请求自动地合并成一个请求，发送给 combo 服务器。
 
-2、对于入口的 AMD/CMD 模块，能够自动解析出模块的深层依赖关系，并将所依赖文件及页面上的其它 js 文件合并为一个请求发送。 --- 自动提取、无需配置
+2、对于入口的 AMD/CMD 模块，能够自动解析出模块的深层依赖关系，并将所依赖文件及页面上的其它 js 文件合并为一个请求发送。
 
 3、对 HTML 页面中每个 js/css 链接都会根据文件内容自动地添加版本号后缀，js/css 内容更新将触发版本号的实时更新，使得浏览器端缓存或 CDN 缓存能够强制失效。
 
 4、解决平滑发布问题：当js/css服务器与后台应用服务器分集群部署时，在发布过程中会遇到样式与后台代码上线不同步的问题，造成短时间的线上服务异常，StyleCombine可以自动化地解决这个问题。
 
 
-styleCombine 系统主要由三大部分组成，分别是：1、安装在应用服务器上的 apache/nginx 模块。2、运行在静态资源服务器上的 NodeJS [依赖解析服务](https://github.com/fangdeng/VersionCenter)。3、接收 combo URL 请求的 Tengine 服务器。
+styleCombine 系统主要由三大部分组成，分别是：
+
+1、安装在应用服务器上的 apache/nginx 模块。
+
+2、运行在静态资源服务器上的 NodeJS [依赖解析服务](https://github.com/fangdeng/VersionCenter)。
+
+3、接收 combo URL 请求的 [Tengine 服务器](http://tengine.taobao.org/index_cn.html)。
 
 该项目是对 apache/nginx 模块的代码实现。
 
@@ -54,7 +60,7 @@ apache 版本：
 	
 	d、SC_BlackList 及 SC_WhiteList配置可以为符合某些规则的 URL 不进行或进行 Combine 处理。
 	
-	e、CustomLog 中 StyleVersionUpdator 传入的第一个参数就是 NodeJS [依赖解析服务](https://github.com/fangdeng/VersionCenter)的服务接口 URL 地址。 
+	e、CustomLog 中 StyleVersionUpdator 传入的第一个参数就是 NodeJS 依赖解析服务(https://github.com/fangdeng/VersionCenter)的服务接口 URL 地址。 
 
 	
 	
