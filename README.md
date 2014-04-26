@@ -31,18 +31,18 @@ apache 版本：
 
 (3)配置 Apache 服务器的 httd.conf 文件，增加如下代码：
 
-   #set($appName = "应用的名称")
-	LoadModule styleCombine_module   ${xxx_deployhome}/conf/modules/mod_styleCombine.so
-	<IfModule mod_styleCombine.c>
-		SC_Enabled       On
-		SC_AppName       $!appName
-		SC_OldDomains    http://style.c.aliimg.com;
-		SC_NewDomains    http://astyle.alicdn.com;
-		SC_FilterCntType text/html;text/htm;
-		SC_MaxUrlLen     1024
-		LogFormat        nolog
-		CustomLog "| ${xxx_deployhome}/bin/StyleVersionUpdator http://style-center.alibaba-inc.com:8080/output/styleVersion.tar.gz?appName=$!appName ${xxx_output}/ 120" nolog
-	</IfModule>
+	    #set($appName = "应用的名称")
+		LoadModule styleCombine_module   ${xxx_deployhome}/conf/modules/mod_styleCombine.so
+		<IfModule mod_styleCombine.c>
+			SC_Enabled       On
+			SC_AppName       $!appName
+			SC_OldDomains    http://style.c.aliimg.com;
+			SC_NewDomains    http://astyle.alicdn.com;
+			SC_FilterCntType text/html;text/htm;
+			SC_MaxUrlLen     1024
+			LogFormat        nolog
+			CustomLog "| ${xxx_deployhome}/bin/StyleVersionUpdator http://style-center.alibaba-inc.com:8080/output/styleVersion.tar.gz?appName=$!appName ${xxx_output}/ 120" nolog
+		</IfModule>
 
 	注意：
 	
@@ -56,6 +56,7 @@ apache 版本：
 	
 	e、CustomLog 中 StyleVersionUpdator 传入的第一个参数就是 NodeJS [依赖解析服务](https://github.com/fangdeng/VersionCenter)的服务接口 URL 地址。 
 
+	
 	
 nginx 版本：
 
@@ -81,14 +82,14 @@ nginx 版本：
 
 src/目录
 
-  apache目录
-	styleCombine提供apache的模块支持；进入apache目录运行make && make install 进行编译。
-  client目录
-	styleCombine必须有一个client运行在应用端，用于定时更新style文件的版本号作用，进入client目录运行 make && make install 编译
-  nginx目录
-	styleCombine提供nginx的模块支持；编译Nginx时在configure命令后面加上--add-module=/path/to/styleCombine3/src/nginx/即可完成编译。
-  lib目录
-	模块的核心库
+	  apache目录
+		styleCombine提供apache的模块支持；进入apache目录运行make && make install 进行编译。
+	  client目录
+		styleCombine必须有一个client运行在应用端，用于定时更新style文件的版本号作用，进入client目录运行 make && make install 编译
+	  nginx目录
+		styleCombine提供nginx的模块支持；编译Nginx时在configure命令后面加上--add-module=/path/to/styleCombine3/src/nginx/即可完成编译。
+	  lib目录
+		模块的核心库
 
 tests/目录
 
