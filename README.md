@@ -81,7 +81,14 @@ nginx 版本：
 	#SC_BlackList  /nginx_combine_test/7/[0-9]*.[0-9]*.html;
 	#SC_WhiteList  /nginx_combine_test/7/[0-9]*.[0-9]*.html;
 	SC_MaxUrlLen    1024;
-	
+	process styleupdator {
+	 style_updator_url http://style-center.alibaba-inc.com:8080/output/styleVersion.tar.gz?appName=offerweb;
+	 style_updator_path /home/admin/output/run/stylecombine/;
+	 style_updator_internal 120;
+	 style_updator_amd on;
+	 style_updator_debug off;
+	}
+
 	
 目录结构
 -------------------------
